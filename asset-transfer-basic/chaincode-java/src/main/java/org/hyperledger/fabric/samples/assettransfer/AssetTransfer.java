@@ -4,10 +4,19 @@
 
 package org.hyperledger.fabric.samples.assettransfer;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.Security;
+import java.security.Signature;
+import java.security.SignatureException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
-
+import by.bcrypto.bee2j.constants.JceNameConstants;
+import by.bcrypto.bee2j.provider.Bee2SecurityProvider;
+import by.bcrypto.bee2j.provider.BignPublicKey;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -43,7 +52,8 @@ public final class AssetTransfer implements ContractInterface {
 
     private enum AssetTransferErrors {
         ASSET_NOT_FOUND,
-        ASSET_ALREADY_EXISTS
+        ASSET_ALREADY_EXISTS,
+        INVALID_SIGNATURE,
     }
 
     /**
@@ -55,12 +65,16 @@ public final class AssetTransfer implements ContractInterface {
     public void InitLedger(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
 
-        CreateAsset(ctx, "asset1", "blue", 5, "Tomoko", 300);
+        Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
+        Security.addProvider(bee2j);
+
+        // Do nothing because it's not valid operation is such scenario
+       /* CreateAsset(ctx, "asset1", "blue", 5, "Tomoko", 300);
         CreateAsset(ctx, "asset2", "red", 5, "Brad", 400);
         CreateAsset(ctx, "asset3", "green", 10, "Jin Soo", 500);
         CreateAsset(ctx, "asset4", "yellow", 10, "Max", 600);
         CreateAsset(ctx, "asset5", "black", 15, "Adrian", 700);
-        CreateAsset(ctx, "asset6", "white", 15, "Michel", 700);
+        CreateAsset(ctx, "asset6", "white", 15, "Michel", 700);*/
 
     }
 
@@ -77,7 +91,7 @@ public final class AssetTransfer implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset CreateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue) {
+        final String owner, final int appraisedValue, final String signature, final String certificate) {
         ChaincodeStub stub = ctx.getStub();
 
         if (AssetExists(ctx, assetID)) {
@@ -86,7 +100,13 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
         }
 
-        Asset asset = new Asset(assetID, color, size, owner, appraisedValue);
+        if (!verifySignature(owner, signature, certificate)) {
+            String errorMessage = String.format("Signature %s is wrong", signature);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
+        }
+
+        Asset asset = new Asset(assetID, color, size, owner, appraisedValue, signature);
         // Use Genson to convert the Asset into string, sort it alphabetically and serialize it into a json string
         String sortedJson = genson.serialize(asset);
         stub.putStringState(assetID, sortedJson);
@@ -129,7 +149,7 @@ public final class AssetTransfer implements ContractInterface {
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
     public Asset UpdateAsset(final Context ctx, final String assetID, final String color, final int size,
-        final String owner, final int appraisedValue) {
+        final String owner, final int appraisedValue, final String signature, final String certificate) {
         ChaincodeStub stub = ctx.getStub();
 
         if (!AssetExists(ctx, assetID)) {
@@ -138,7 +158,13 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
         }
 
-        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue);
+        if (!verifySignature(owner, signature, certificate)) {
+            String errorMessage = String.format("Signature %s is wrong", signature);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
+        }
+
+        Asset newAsset = new Asset(assetID, color, size, owner, appraisedValue, signature);
         // Use Genson to convert the Asset into string, sort it alphabetically and serialize it into a json string
         String sortedJson = genson.serialize(newAsset);
         stub.putStringState(assetID, sortedJson);
@@ -188,7 +214,8 @@ public final class AssetTransfer implements ContractInterface {
      * @return the old owner
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String TransferAsset(final Context ctx, final String assetID, final String newOwner) {
+    public String TransferAsset(final Context ctx, final String assetID, final String newOwner,
+                                final String signature, final String certificate) {
         ChaincodeStub stub = ctx.getStub();
         String assetJSON = stub.getStringState(assetID);
 
@@ -200,7 +227,13 @@ public final class AssetTransfer implements ContractInterface {
 
         Asset asset = genson.deserialize(assetJSON, Asset.class);
 
-        Asset newAsset = new Asset(asset.getAssetID(), asset.getColor(), asset.getSize(), newOwner, asset.getAppraisedValue());
+        if (!verifySignature(newOwner, signature, certificate)) {
+            String errorMessage = String.format("Asset %s signature is wrong", assetID);
+            System.out.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
+        }
+
+        Asset newAsset = new Asset(asset.getAssetID(), asset.getColor(), asset.getSize(), newOwner, asset.getAppraisedValue(), signature);
         // Use a Genson to conver the Asset into string, sort it alphabetically and serialize it into a json string
         String sortedJson = genson.serialize(newAsset);
         stub.putStringState(assetID, sortedJson);
@@ -235,5 +268,26 @@ public final class AssetTransfer implements ContractInterface {
         final String response = genson.serialize(queryResults);
 
         return response;
+    }
+
+    private boolean verifySignature(String owner, String signature, String certificate) {
+        try {
+            BignPublicKey publicKey = createBignPublicKey(certificate);
+            Signature bignSignature = Signature.getInstance(JceNameConstants.BignWithBelt, JceNameConstants.ProviderName);
+            bignSignature.initVerify(publicKey);
+            bignSignature.update(owner.getBytes());
+
+            return bignSignature.verify(Base64.getDecoder().decode(signature));
+        }
+        catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeyException | SignatureException exception)
+        {
+            System.out.println(exception);
+            return false;
+        }
+    }
+
+    private static BignPublicKey createBignPublicKey(String certificate) {
+        byte[] decoded = Base64.getDecoder().decode(certificate);
+        return new BignPublicKey(decoded);
     }
 }

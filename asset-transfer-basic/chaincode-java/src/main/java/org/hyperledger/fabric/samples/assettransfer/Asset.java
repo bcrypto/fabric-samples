@@ -29,6 +29,9 @@ public final class Asset {
     @Property()
     private final int appraisedValue;
 
+    @Property
+    private String signature;
+
     public String getAssetID() {
         return assetID;
     }
@@ -49,14 +52,20 @@ public final class Asset {
         return appraisedValue;
     }
 
+    public String getSignature() {
+        return signature;
+    }
+
     public Asset(@JsonProperty("assetID") final String assetID, @JsonProperty("color") final String color,
             @JsonProperty("size") final int size, @JsonProperty("owner") final String owner,
-            @JsonProperty("appraisedValue") final int appraisedValue) {
+            @JsonProperty("appraisedValue") final int appraisedValue,
+            @JsonProperty("signature") final String signature) {
         this.assetID = assetID;
         this.color = color;
         this.size = size;
         this.owner = owner;
         this.appraisedValue = appraisedValue;
+        this.signature = signature;
     }
 
     @Override
@@ -88,6 +97,6 @@ public final class Asset {
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) + " [assetID=" + assetID + ", color="
-                + color + ", size=" + size + ", owner=" + owner + ", appraisedValue=" + appraisedValue + "]";
+                + color + ", size=" + size + ", owner=" + owner + ", appraisedValue=" + appraisedValue + ", signature=" + signature + "]";
     }
 }

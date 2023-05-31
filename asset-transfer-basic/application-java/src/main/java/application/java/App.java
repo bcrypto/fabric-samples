@@ -25,6 +25,9 @@ import org.hyperledger.fabric.gateway.*;
 
 public class App {
 
+	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
+	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "basic");
+
 	private static PrivateKey privateKey;
 	private static PublicKey publicKey;
 	private static String certificate;
@@ -42,7 +45,7 @@ public class App {
 		Path networkConfigPath = Paths.get("..", "..", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.yaml");
 
 		Gateway.Builder builder = Gateway.createBuilder();
-		builder.identity(wallet, "appUser").networkConfig(networkConfigPath).discovery(true);
+		builder.identity(wallet, "javaAppUser").networkConfig(networkConfigPath).discovery(true);
 		return builder.connect();
 	}
 
@@ -61,8 +64,8 @@ public class App {
 		try (Gateway gateway = connect()) {
 
 			// get the network and contract
-			Network network = gateway.getNetwork("mychannel");
-			Contract contract = network.getContract("basic");
+			Network network = gateway.getNetwork(CHANNEL_NAME);
+			Contract contract = network.getContract(CHAINCODE_NAME);
 
 			byte[] result;
 
@@ -128,6 +131,7 @@ public class App {
 		}
 		catch(Exception e){
 			System.err.println(e);
+			System.exit(1);
 		}
 	}
 

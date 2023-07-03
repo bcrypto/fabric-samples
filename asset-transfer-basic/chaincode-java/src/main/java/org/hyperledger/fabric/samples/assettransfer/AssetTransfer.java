@@ -4,19 +4,16 @@
 
 package org.hyperledger.fabric.samples.assettransfer;
 
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.Security;
-import java.security.Signature;
-import java.security.SignatureException;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.List;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.cert.*;
+import java.util.*;
 
 import by.bcrypto.bee2j.constants.JceNameConstants;
 import by.bcrypto.bee2j.provider.Bee2SecurityProvider;
-import by.bcrypto.bee2j.provider.BignPublicKey;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.Contact;
@@ -55,6 +52,17 @@ public final class AssetTransfer implements ContractInterface {
         ASSET_ALREADY_EXISTS,
         INVALID_SIGNATURE,
     }
+
+    private static final String FnpCertificatePath = Paths.get("out", "fnp", "cert.der").toString();
+    private static final String NpCertificatePath = Paths.get("out", "np", "cert.der").toString();
+    private static final String Ca0CertificatePath = Paths.get("out", "ca0", "cert.der").toString();
+    private static final String Ca0CrlPath = Paths.get("out", "ca0", "crl1.der").toString();
+    private static final String Ca1CertificatePath = Paths.get("out", "ca1", "cert.der").toString();
+    private static final String Ca1CrlPath = Paths.get("out", "ca1", "crl1.der").toString();
+
+    private static ArrayList<X509Certificate> certificateStorage;
+    private static X509Certificate ca0Certificate;
+    private static X509Certificate ca1Certificate;
 
     /**
      * Creates some initial assets on the ledger.
@@ -100,7 +108,14 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
         }
 
-        if (!verifySignature(owner, signature, certificate)) {
+        boolean valid = false;
+        try {
+            valid = verifySignature(owner, signature, certificate);
+        } catch (Exception e) {
+            throw new ChaincodeException(AssetTransferErrors.INVALID_SIGNATURE.toString(), e);
+        }
+
+        if (!valid) {
             String errorMessage = String.format("Signature %s is wrong", signature);
             System.out.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
@@ -158,7 +173,14 @@ public final class AssetTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_NOT_FOUND.toString());
         }
 
-        if (!verifySignature(owner, signature, certificate)) {
+        boolean valid = false;
+        try {
+            valid = verifySignature(owner, signature, certificate);
+        } catch (Exception e) {
+            throw new ChaincodeException(AssetTransferErrors.INVALID_SIGNATURE.toString(), e);
+        }
+
+        if (!valid) {
             String errorMessage = String.format("Signature %s is wrong", signature);
             System.out.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
@@ -226,9 +248,17 @@ public final class AssetTransfer implements ContractInterface {
         }
 
         Asset asset = genson.deserialize(assetJSON, Asset.class);
+        boolean valid = false;
 
-        if (!verifySignature(newOwner, signature, certificate)) {
-            String errorMessage = String.format("Asset %s signature is wrong", assetID);
+        try {
+            valid = verifySignature(newOwner, signature, certificate);
+        } catch (Exception e) {
+            throw new ChaincodeException(AssetTransferErrors.INVALID_SIGNATURE.toString(), e);
+        }
+
+        if (!valid)
+        {
+            String errorMessage = String.format("Signature %s is wrong", signature);
             System.out.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.INVALID_SIGNATURE.toString());
         }
@@ -270,24 +300,75 @@ public final class AssetTransfer implements ContractInterface {
         return response;
     }
 
-    private boolean verifySignature(String owner, String signature, String certificate) {
-        try {
-            BignPublicKey publicKey = createBignPublicKey(certificate);
+    private boolean verifySignature(String owner, String signature, String serialNumber) throws InvalidKeyException, CertificateException, IOException, NoSuchProviderException, NoSuchAlgorithmException, SignatureException, CertPathValidatorException, InvalidAlgorithmParameterException, CertPathBuilderException, CRLException {
+            Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
+            Security.addProvider(bee2j);
+            X509Certificate certificate = getCertificate(serialNumber);
+            PublicKey publicKey = certificate.getPublicKey();
             Signature bignSignature = Signature.getInstance(JceNameConstants.BignWithBelt, JceNameConstants.ProviderName);
             bignSignature.initVerify(publicKey);
             bignSignature.update(owner.getBytes());
 
-            return bignSignature.verify(Base64.getDecoder().decode(signature));
-        }
-        catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeyException | SignatureException exception)
-        {
-            System.out.println(exception);
-            return false;
-        }
+            return bignSignature.verify(Base64.getDecoder().decode(signature)) && verifyCertificate(certificate);
     }
 
-    private static BignPublicKey createBignPublicKey(String certificate) {
-        byte[] decoded = Base64.getDecoder().decode(certificate);
-        return new BignPublicKey(decoded);
+    private X509Certificate getCertificate(String certificateSerialNumber) throws CertificateException, IOException, NoSuchProviderException {
+
+        if (certificateStorage == null){
+            certificateStorage = new ArrayList<>();
+            certificateStorage.add(createCertificate(FnpCertificatePath));
+            certificateStorage.add(createCertificate(NpCertificatePath));
+            ca0Certificate = createCertificate(Ca0CertificatePath);
+            ca1Certificate = createCertificate(Ca1CertificatePath);
+        }
+
+        return certificateStorage.stream().filter(x -> x.getSerialNumber().toString().equals(certificateSerialNumber)).findFirst().get();
+    }
+
+    private X509Certificate createCertificate(String path) throws CertificateException, NoSuchProviderException, IOException {
+        byte[] certificate = this.getClass().getClassLoader().getResourceAsStream(path).readAllBytes();
+        CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509", "Bee2");
+        ByteArrayInputStream is = new ByteArrayInputStream(certificate);
+
+        return (X509Certificate) certificateFactory.generateCertificate(is);
+    }
+
+    private boolean verifyCertificate(X509Certificate certificate) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException, CertPathBuilderException, CertPathValidatorException, CertificateException, CRLException, IOException {
+        CertPathBuilder cpb = CertPathBuilder.getInstance("PKIX");
+        CertPathValidator validator = CertPathValidator.getInstance("PKIX");
+        Set<TrustAnchor> trustAnchorSet = new HashSet<>();
+        trustAnchorSet.add(new TrustAnchor(ca0Certificate, null));
+        Set<X509Certificate> intermediateCerts = new HashSet<>();
+        intermediateCerts.add(ca1Certificate);
+        Set<X509CRL> crls = new HashSet<>();
+        crls.add(createCrl(Ca0CrlPath));
+        crls.add(createCrl(Ca1CrlPath));
+
+        X509CertSelector selector = new X509CertSelector();
+        selector.setCertificate(certificate);
+
+        PKIXBuilderParameters pkixParams = new PKIXBuilderParameters(trustAnchorSet, selector);
+        // uncomment to skip revocation
+        //pkixParams.setRevocationEnabled(false);
+        CertStore intermediateCertStore = CertStore.getInstance("Collection",
+                new CollectionCertStoreParameters(intermediateCerts));
+        pkixParams.addCertStore(intermediateCertStore);
+        CertStoreParameters crlsCertStore = new CollectionCertStoreParameters(crls);
+        pkixParams.addCertStore(CertStore.getInstance("Collection", crlsCertStore));
+
+
+        PKIXRevocationChecker rc = (PKIXRevocationChecker)cpb.getRevocationChecker();
+        rc.setOptions(EnumSet.of(PKIXRevocationChecker.Option.PREFER_CRLS));
+        CertPath certPath = cpb.build(pkixParams).getCertPath();
+        validator.validate(certPath, pkixParams);
+
+        return true;
+    }
+
+    private X509CRL createCrl(String path) throws IOException, CertificateException, CRLException {
+        InputStream inStream = new ByteArrayInputStream(this.getClass().getClassLoader().getResourceAsStream(path).readAllBytes());
+        CertificateFactory cf = CertificateFactory.getInstance("X.509");
+
+        return (X509CRL) cf.generateCRL(inStream);
     }
 }

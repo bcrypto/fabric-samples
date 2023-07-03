@@ -9,28 +9,38 @@
 
 package application.java;
 
-import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
-import java.util.Base64;
-import java.util.concurrent.TimeoutException;
+import java.security.cert.*;
+import java.security.spec.InvalidKeySpecException;
+import java.util.*;
 
 import by.bcrypto.bee2j.constants.JceNameConstants;
 import by.bcrypto.bee2j.provider.Bee2SecurityProvider;
-import by.bcrypto.bee2j.provider.BignPublicKey;
-import org.apache.commons.math3.geometry.partitioning.BSPTree;
+import by.bcrypto.bee2j.provider.BignPrivateKeySpec;
 import org.hyperledger.fabric.gateway.*;
 
+import javax.naming.InvalidNameException;
+import javax.naming.ldap.LdapName;
 
 public class App {
 
 	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
 	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "basic");
+	private static final String FnpPrivateKeyPath = Paths.get("out", "fnp", "privkey.der").toString();
+	private static final String FnpCertificatePath = Paths.get("out", "fnp", "cert.der").toString();
+	private static final String FnpPassword = "fnpfnpfnp";
+	private static final String NpPrivateKeyPath = Paths.get("out", "np", "privkey.der").toString();
+	private static final String NpCertificatePath = Paths.get("out", "np", "cert.der").toString();
+	private static final String NpPassword = "npnpnp";
 
-	private static PrivateKey privateKey;
-	private static PublicKey publicKey;
-	private static String certificate;
+	private static PrivateKey fnpPrivateKey;
+	private static PrivateKey npPrivateKey;
+	private static X509Certificate fnpCertificate;
+	private static X509Certificate npCertificate;
 
 	static {
 		System.setProperty("org.hyperledger.fabric.sdk.service_discovery.as_localhost", "true");
@@ -49,16 +59,15 @@ public class App {
 		return builder.connect();
 	}
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) {
 		// enrolls the admin and registers the user
 		try {
 			EnrollAdmin.main(null);
 			RegisterUser.main(null);
+			initializeKeyMaterials();
 		} catch (Exception e) {
 			System.err.println(e);
 		}
-
-		createKeyPair();
 
 		// connect to the network and invoke the smart contract
 		try (Gateway gateway = connect()) {
@@ -72,7 +81,7 @@ public class App {
 			System.out.println("Submit Transaction: InitLedger creates the initial set of assets on the ledger.");
 			contract.submitTransaction("InitLedger");
 
-			createInitialTransactions(contract);
+			createInitialTransactions(contract, Signer.Fnp);
 
 			System.out.println("\n");
 			result = contract.evaluateTransaction("GetAllAssets");
@@ -80,10 +89,9 @@ public class App {
 
 			System.out.println("\n");
 			System.out.println("Submit Transaction: CreateAsset asset13");
-			// CreateAsset creates an asset with ID asset13, color yellow, owner Tom, size 5 and appraisedValue of 1300
-			final String asset13Owner = "Tom";
-			String signature = sign(asset13Owner);
-			contract.submitTransaction("CreateAsset", "asset13", "yellow", "5", asset13Owner, "1300", signature, certificate);
+			// CreateAsset creates an asset with ID asset13, color yellow, owner Fnp, size 5 and appraisedValue of 1300
+			final Signer asset13Owner = Signer.Fnp;
+			createAsset(contract, "asset13", "yellow", 5, asset13Owner, 1300);
 
 			System.out.println("\n");
 			System.out.println("Evaluate Transaction: ReadAsset asset13");
@@ -100,8 +108,8 @@ public class App {
 			System.out.println("\n");
 			System.out.println("Submit Transaction: UpdateAsset asset1, new AppraisedValue : 350");
 			// UpdateAsset updates an existing asset with new properties. Same args as CreateAsset
-			final String asset1Owner = "Tomoko";
-			contract.submitTransaction("UpdateAsset", "asset1", "blue", "5", asset1Owner, "350", sign(asset1Owner), certificate);
+			final Signer asset1Owner = Signer.Fnp;
+			contract.submitTransaction("UpdateAsset", "asset1", "blue", "5", getOwner(getCertificate(asset1Owner)), "350", sign(asset1Owner), getCertificateSerialNumber(asset1Owner));
 
 			System.out.println("\n");
 			System.out.println("Evaluate Transaction: ReadAsset asset1");
@@ -112,17 +120,17 @@ public class App {
 				System.out.println("\n");
 				System.out.println("Submit Transaction: UpdateAsset asset70");
 				// Non existing asset asset70 should throw Error
-				final String asset70Owner = "Tomoko";
-				contract.submitTransaction("UpdateAsset", "asset70", "blue", "5", asset70Owner, "300", sign(asset70Owner), certificate);
+				final Signer asset70Owner = Signer.Np;
+				contract.submitTransaction("UpdateAsset", "asset70", "blue", "5", getOwner(getCertificate(asset70Owner)), "300", sign(asset70Owner), getCertificateSerialNumber(asset70Owner));
 			} catch (Exception e) {
 				System.err.println("Expected an error on UpdateAsset of non-existing Asset: " + e);
 			}
 
 			System.out.println("\n");
-			System.out.println("Submit Transaction: TransferAsset asset1 from owner Tomoko > owner Tom");
-			// TransferAsset transfers an asset with given ID to new owner Tom
-			final String newAsset1Owner = "Tom";
-			contract.submitTransaction("TransferAsset", "asset1", newAsset1Owner, sign(newAsset1Owner), certificate);
+			System.out.println("Submit Transaction: TransferAsset asset1 from owner Fnp > owner Np");
+			// TransferAsset transfers an asset with given ID to new owner Np
+			final Signer newAsset1Owner = Signer.Np;
+			contract.submitTransaction("TransferAsset", "asset1", getOwner(getCertificate(newAsset1Owner)), sign(newAsset1Owner), getCertificateSerialNumber(newAsset1Owner));
 
 			System.out.println("\n");
 			System.out.println("Evaluate Transaction: ReadAsset asset1");
@@ -135,38 +143,98 @@ public class App {
 		}
 	}
 
-	private static void createKeyPair() throws NoSuchAlgorithmException, NoSuchProviderException {
-		Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
-		Security.addProvider(bee2j);
+	private static PrivateKey createPrivateKey(String path, String password) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeySpecException, IOException {
+		byte[] privateKeyContainer = App.class.getClassLoader().getResourceAsStream(path).readAllBytes();;
+		BignPrivateKeySpec bignPrivateKeySpec = new BignPrivateKeySpec(privateKeyContainer, password);
+		KeyFactory bignKeyFactory = KeyFactory.getInstance("Bign", "Bee2");
 
-		KeyPairGenerator bignKeyPairGenerator = KeyPairGenerator.getInstance("Bign","Bee2");
-		KeyPair bignKeyPair =  bignKeyPairGenerator.generateKeyPair();
-		privateKey = bignKeyPair.getPrivate();
-		publicKey = bignKeyPair.getPublic();
-		certificate = Base64.getEncoder().encodeToString(publicKey.getEncoded());
+		return bignKeyFactory.generatePrivate(bignPrivateKeySpec);
 	}
 
-	private static String sign(String owner) throws NoSuchAlgorithmException, NoSuchProviderException, InvalidKeyException, SignatureException {
+	private static String sign(Signer signer) throws Exception {
+		PrivateKey privateKey = getPrivateKey(signer);
+		X509Certificate certificate = getCertificate(signer);
+
 		Signature bignSignature = Signature.getInstance(JceNameConstants.BignWithBelt, JceNameConstants.ProviderName);
 		bignSignature.initSign(privateKey);
 
+		String owner = getOwner(certificate);
 		bignSignature.update(owner.getBytes());
 		byte[] sig = bignSignature.sign();
 
 		return Base64.getEncoder().encodeToString(sig);
 	}
 
-	private static void createInitialTransactions(Contract ctx) throws NoSuchAlgorithmException, SignatureException, NoSuchProviderException, InvalidKeyException, ContractException, InterruptedException, TimeoutException {
-		createAsset(ctx, "asset1", "blue", 5, "Tomoko", 300);
-		createAsset(ctx, "asset2", "red", 5, "Brad", 400);
-		createAsset(ctx, "asset3", "green", 10, "Jin Soo", 500);
-		createAsset(ctx, "asset4", "yellow", 10, "Max", 600);
-		createAsset(ctx, "asset5", "black", 15, "Adrian", 700);
-		createAsset(ctx, "asset6", "white", 15, "Michel", 700);
+	private static void createInitialTransactions(Contract ctx, Signer signer) throws Exception {
+		createAsset(ctx, "asset1", "blue", 5, signer, 300);
+		createAsset(ctx, "asset2", "red", 5, signer, 400);
+		createAsset(ctx, "asset3", "green", 10, signer, 500);
+		createAsset(ctx, "asset4", "yellow", 10, signer, 600);
+		createAsset(ctx, "asset5", "black", 15, signer, 700);
+		createAsset(ctx, "asset6", "white", 15, signer, 700);
 	}
 
-	private static void createAsset(final Contract contract, final String assetID, final String color, final int size,
-									final String owner, final int appraisedValue) throws NoSuchAlgorithmException, SignatureException, NoSuchProviderException, InvalidKeyException, ContractException, InterruptedException, TimeoutException {
-		contract.submitTransaction("CreateAsset", assetID, color, Integer.toString(size), owner, Integer.toString(appraisedValue), sign(owner), certificate);
+	private static void createAsset(final Contract contract, final String assetID, final String color, final int size, Signer signer, final int appraisedValue) throws Exception {
+		contract.submitTransaction("CreateAsset", assetID, color, Integer.toString(size), getOwner(getCertificate(signer)), Integer.toString(appraisedValue), sign(signer), getCertificateSerialNumber(signer));
+	}
+
+	private static void initializeKeyMaterials() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException, CertificateException {
+		Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
+		Security.addProvider(bee2j);
+
+		fnpCertificate = createCertificate(FnpCertificatePath);
+		npCertificate  = createCertificate(NpCertificatePath);
+
+		fnpPrivateKey = createPrivateKey(FnpPrivateKeyPath, FnpPassword);
+		npPrivateKey = createPrivateKey(NpPrivateKeyPath, NpPassword);
+	}
+
+	private static X509Certificate createCertificate(String path) throws CertificateException, NoSuchProviderException, IOException {
+		byte[] certificate = App.class.getClassLoader().getResourceAsStream(path).readAllBytes();
+		CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509", "Bee2");
+		ByteArrayInputStream is = new ByteArrayInputStream(certificate);
+
+		return (X509Certificate) certificateFactory.generateCertificate(is);
+	}
+
+	private static String getOwner(X509Certificate certificate) throws InvalidNameException {
+		String dn = certificate.getSubjectX500Principal().getName();
+		return new LdapName(dn).getRdns().stream().filter(x -> x.getType().equalsIgnoreCase("CN")).findFirst().get().getValue().toString();
+	}
+
+	private static PrivateKey getPrivateKey(Signer signer) throws Exception {
+		switch (signer)
+		{
+			case Fnp:
+				return fnpPrivateKey;
+			case Np:
+				return npPrivateKey;
+			default:
+				throw new Exception("Invalid signer");
+		}
+	}
+
+	private static X509Certificate getCertificate(Signer signer) throws Exception {
+		switch (signer)
+		{
+			case Fnp:
+				return fnpCertificate;
+			case Np:
+				return npCertificate;
+			default:
+				throw new Exception("Invalid signer");
+		}
+	}
+
+	private static String getCertificateSerialNumber(Signer signer) throws Exception {
+		switch (signer)
+		{
+			case Fnp:
+				return fnpCertificate.getSerialNumber().toString();
+			case Np:
+				return npCertificate.getSerialNumber().toString();
+			default:
+				throw new Exception("Invalid signer");
+		}
 	}
 }

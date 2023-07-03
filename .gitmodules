@@ -1,0 +1,3 @@
+[submodule "submodules/bpki"]
+	path = submodules/bpki
+	url = https://github.com/bcrypto/bpki.git

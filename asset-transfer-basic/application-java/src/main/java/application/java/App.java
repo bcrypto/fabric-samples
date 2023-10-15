@@ -47,7 +47,7 @@ public class App {
 	}
 
 	// helper function for getting connected to the gateway
-	public static Gateway connect() throws Exception{
+	public static Gateway connect(String userName) throws Exception{
 		// Load a file system based wallet for managing identities.
 		Path walletPath = Paths.get("wallet");
 		Wallet wallet = Wallets.newFileSystemWallet(walletPath);
@@ -55,22 +55,24 @@ public class App {
 		Path networkConfigPath = Paths.get("..", "..", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.yaml");
 
 		Gateway.Builder builder = Gateway.createBuilder();
-		builder.identity(wallet, "javaAppUser").networkConfig(networkConfigPath).discovery(true);
+		builder.identity(wallet, userName).networkConfig(networkConfigPath).discovery(true);
 		return builder.connect();
 	}
 
 	public static void main(String[] args) {
+		var userName = args[0];
+		System.out.println("Start application as " + userName);
 		// enrolls the admin and registers the user
 		try {
 			EnrollAdmin.main(null);
-			RegisterUser.main(null);
+			RegisterUser.main(args);
 			initializeKeyMaterials();
 		} catch (Exception e) {
 			System.err.println(e);
 		}
 
 		// connect to the network and invoke the smart contract
-		try (Gateway gateway = connect()) {
+		try (Gateway gateway = connect(userName)) {
 
 			// get the network and contract
 			Network network = gateway.getNetwork(CHANNEL_NAME);

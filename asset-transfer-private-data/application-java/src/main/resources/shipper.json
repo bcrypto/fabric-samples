@@ -1,0 +1,8 @@
+{
+  "name": "shipper",
+  "attributes": {
+    "role": "SHIPPER",
+    "GLN": "1234567890123",
+    "CCC": "123"
+  }
+}

@@ -1,6 +1,7 @@
 /*
  * SPDX-License-Identifier: Apache-2.0
- */
+
+
 
 package org.hyperledger.fabric.samples.privatedata;
 
@@ -168,3 +169,4 @@ public final class AssetTransferTest {
     private static byte[] dataAsset1Bytes = "{ \"objectType\": \"testasset\", \"assetID\": \"asset1\", \"color\": \"blue\", \"size\": 5, \"owner\": \"testOrg1User\", \"appraisedValue\": 300 }".getBytes();
 
 }
+*/

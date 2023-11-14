@@ -1,6 +1,7 @@
 package org.hyperledger.fabric.samples.privatedata;
 
 import com.owlike.genson.Genson;
+import org.hyperledger.fabric.contract.ClientIdentity;
 import org.hyperledger.fabric.contract.Context;
 import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.*;
@@ -16,7 +17,7 @@ import java.util.Map;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @Contract(
-        name = "basic",
+        name = "private",
         info = @Info(
                 title = "Cargo Transfer",
                 description = "The hyperlegendary cargo transfer",
@@ -39,10 +40,16 @@ public final class CargoTransfer implements ContractInterface {
     private int id = 0;
 
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String CreateWaybillId(final Context ctx)
+    public String ReserveWaybill(final Context ctx)
     {
-        id++;
-        return  "-" + id;
+        ChaincodeStub stub = ctx.getStub();
+        ClientIdentity user = getUser(stub);
+        verifyUserRole(user, Role.SHIPPER);
+        String ccc = getCCC(user);
+        String gln = getGLN(user);
+        String id = reserveWaybillId(user);
+
+        return ccc + "-" + gln + "-" + id;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
@@ -264,6 +271,36 @@ public final class CargoTransfer implements ContractInterface {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INVALID_ACCESS.toString());
         }
+    }
+
+    private void verifyUserRole(ClientIdentity user, Role expectedRole) {
+        var actualRole = user.getAttributeValue(RoleAttributeName);
+        if (actualRole != expectedRole.toString()) {
+            throw new ChaincodeException("For this action Role must be " + expectedRole + "but it was " + actualRole);
+        }
+    }
+
+    private ClientIdentity getUser(ChaincodeStub stub){
+        ClientIdentity user;
+        try {
+            user = new ClientIdentity(stub);
+        } catch (Exception e) {
+            throw new ChaincodeException("Can't verify user");
+        }
+
+        return user;
+    }
+
+    private String getCCC(ClientIdentity user){
+        return user.getAttributeValue("CCC");
+    }
+
+    private String getGLN(ClientIdentity user){
+        return user.getAttributeValue("GLN");
+    }
+
+    private String reserveWaybillId(ClientIdentity user){
+        return "1";
     }
 
 }

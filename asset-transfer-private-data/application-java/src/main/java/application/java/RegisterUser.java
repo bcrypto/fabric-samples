@@ -26,8 +26,8 @@ public class RegisterUser {
 
 	private final static String RoleAttributeName = "ROLE";
 
-	public static void main(Organization organization) throws Exception {
-		var userName = organization.getName();
+	public static void main(Organization organization, String userName) throws Exception {
+		//var userName = organization.getName();
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
 		props.put("pemFile",

@@ -30,7 +30,7 @@ import javax.naming.ldap.LdapName;
 public class App {
 
 	private static final String CHANNEL_NAME = System.getenv().getOrDefault("CHANNEL_NAME", "mychannel");
-	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "basic");
+	private static final String CHAINCODE_NAME = System.getenv().getOrDefault("CHAINCODE_NAME", "private");
 	private static final String FnpPrivateKeyPath = Paths.get("out", "fnp", "privkey.der").toString();
 	private static final String FnpCertificatePath = Paths.get("out", "fnp", "cert.der").toString();
 	private static final String FnpPassword = "fnpfnpfnp";
@@ -54,7 +54,7 @@ public class App {
 		Path walletPath = Paths.get("wallet");
 		Wallet wallet = Wallets.newFileSystemWallet(walletPath);
 		// load a CCP
-		Path networkConfigPath = Paths.get("..", "..", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.yaml");
+		Path networkConfigPath = Paths.get("..", "..", "test-network", "organizations", "peerOrganizations", "org1.example.com", "connection-org1.json");
 
 		Gateway.Builder builder = Gateway.createBuilder();
 		builder.identity(wallet, userName).networkConfig(networkConfigPath).discovery(true);
@@ -63,7 +63,7 @@ public class App {
 
 	public static void main(String[] args) {
 		String userName = "shipper";//args[0];
-		String jsonFile = userName + ".json";
+		String jsonFile = "shipper.json";
 		System.out.println("Start application as " + jsonFile);
 		Organization shipper = null;
 		try {
@@ -77,7 +77,7 @@ public class App {
 		// enrolls the admin and registers the user
 		try {
 			EnrollAdmin.main(null);
-			RegisterUser.main(shipper);
+			RegisterUser.main(shipper, userName);
 		} catch (Exception e) {
 			System.err.println(e);
 		}
@@ -91,8 +91,10 @@ public class App {
 
 			byte[] result;
 
-			System.out.println("Submit Transaction: Get creates the initial set of assets on the ledger.");
-			result = contract.submitTransaction("InitLedger");
+			System.out.println("Evaluate Transaction: Reserve waybill");
+			result = contract.evaluateTransaction("CreateWaybillId");
+			var id = new String(result);
+			System.out.println("Reserved waybill with id " + id);
 		}
 		catch(Exception e){
 			System.err.println(e);

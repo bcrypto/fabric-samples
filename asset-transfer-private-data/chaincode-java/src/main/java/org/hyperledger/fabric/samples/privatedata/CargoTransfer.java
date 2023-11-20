@@ -276,7 +276,7 @@ public final class CargoTransfer implements ContractInterface {
     private void verifyUserRole(ClientIdentity user, Role expectedRole) {
         var actualRole = user.getAttributeValue(RoleAttributeName);
         if (actualRole != expectedRole.toString()) {
-            throw new ChaincodeException("For this action Role must be " + expectedRole + " but it was " + actualRole);
+            throw new ChaincodeException("For this action Role must be " + expectedRole + "but it was " + actualRole);
         }
     }
 

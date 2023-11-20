@@ -92,7 +92,7 @@ public class App {
 			byte[] result;
 
 			System.out.println("Evaluate Transaction: Reserve waybill");
-			result = contract.evaluateTransaction("ReserveWaybill");
+			result = contract.evaluateTransaction("CreateWaybillId");
 			var id = new String(result);
 			System.out.println("Reserved waybill with id " + id);
 		}

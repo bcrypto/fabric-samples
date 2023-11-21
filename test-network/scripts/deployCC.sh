@@ -140,44 +140,67 @@ checkPrereqs
 ## package the chaincode
 packageChaincode
 
-## Install chaincode on peer0.org1 and peer0.org2
+## Install chaincode on peer0.org1, peer0.org2 and operator
 infoln "Installing chaincode on peer0.org1..."
-installChaincode 1
+installChaincode org1
 infoln "Install chaincode on peer0.org2..."
-installChaincode 2
+installChaincode org2
+infoln "Install chaincode on peer0.operator..."
+installChaincode operator
 
 ## query whether the chaincode is installed
-queryInstalled 1
+queryInstalled org1
 
 ## approve the definition for org1
-approveForMyOrg 1
+approveForMyOrg org1
 
 ## check whether the chaincode definition is ready to be committed
-## expect org1 to have approved and org2 not to
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": false"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": false"
+## expect org1 to have approved and org2, operator not to
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
 
 ## now approve also for org2
-approveForMyOrg 2
+approveForMyOrg org2
 
 ## check whether the chaincode definition is ready to be committed
-## expect them both to have approved
-checkCommitReadiness 1 "\"Org1MSP\": true" "\"Org2MSP\": true"
-checkCommitReadiness 2 "\"Org1MSP\": true" "\"Org2MSP\": true"
+## expect them both to have approved (not operator)
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
+
+## now approve also for operator
+approveForMyOrg operator
+
+## check whether the chaincode definition is ready to be committed
+## expect them all to have approved
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+
+## now approve also for operator
+approveForMyOrg operator
+
+## check whether the chaincode definition is ready to be committed
+## expect them all to have approved
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
 
 ## now that we know for sure both orgs have approved, commit the definition
-commitChaincodeDefinition 1 2
+commitChaincodeDefinition org1 org2 operator
 
 ## query on both orgs to see that the definition committed successfully
-queryCommitted 1
-queryCommitted 2
+queryCommitted org1
+queryCommitted org2
+queryCommitted operator
 
 ## Invoke the chaincode - this does require that the chaincode have the 'initLedger'
 ## method defined
 if [ "$CC_INIT_FCN" = "NA" ]; then
   infoln "Chaincode initialization is not required"
 else
-  chaincodeInvokeInit 1 2
+  chaincodeInvokeInit org1 org2 operator
 fi
 
 exit 0

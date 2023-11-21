@@ -51,7 +51,7 @@ services:
     networks:
       - test
 
-ca_operator_org:
+  ca_operator_org:
     image: hyperledger/fabric-ca:latest
     labels:
       service: hyperledger-fabric

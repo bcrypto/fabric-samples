@@ -309,7 +309,7 @@ function createOpepatorOrg() {
 
   infoln "Generating the peer0-tls certificates, use --csr.hosts to specify Subject Alternative Names"
   set -x
-  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-operator-org -M "${PWD}/organizations/peerOrganizations/operator/peers/peer0.operator.by/tls" --enrollment.profile tls --csr.hosts peer0.operator.by --csr.hosts localhost --tls.certfiles "${PWD}/organizations/fabric-ca/operator/ca-cert.pem"
+  fabric-ca-client enroll -u https://peer0:peer0pw@localhost:11054 --caname ca-operator-org -M "${PWD}/organizations/peerOrganizations/operator.by/peers/peer0.operator.by/tls" --enrollment.profile tls --csr.hosts peer0.operator.by --csr.hosts localhost --tls.certfiles "${PWD}/organizations/fabric-ca/operator/ca-cert.pem"
   { set +x; } 2>/dev/null
 
   # Copy the tls CA cert, server cert, server keystore to well known file names in the peer's tls directory that are referenced by peer startup config

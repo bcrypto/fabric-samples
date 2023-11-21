@@ -27,7 +27,7 @@ createAnchorPeerUpdate() {
     HOST="peer0.org3.example.com"
     PORT=11051
   elif [ $ORG == operator ]; then
-    HOST="peer0.operator.example.com"
+    HOST="peer0.operator.by"
     PORT=11051
   else
     errorln "${ORG} unknown"

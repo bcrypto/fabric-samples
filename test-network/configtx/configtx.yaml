@@ -97,6 +97,33 @@ Organizations:
             Endorsement:
                 Type: Signature
                 Rule: "OR('Org2MSP.peer')"
+    
+    - &Operator
+        # DefaultOrg defines the organization which is used in the sampleconfig
+        # of the fabric.git development environment
+        Name: OperatorMSP
+
+        # ID to load the MSP definition as
+        ID: OperatorMSP
+
+        MSPDir: ../organizations/peerOrganizations/operator.by/msp
+
+        # Policies defines the set of policies at this level of the config tree
+        # For organization policies, their canonical path is usually
+        #   /Channel/<Application|Orderer>/<OrgName>/<PolicyName>
+        Policies:
+            Readers:
+                Type: Signature
+                Rule: "OR('OperatorMSP.admin', 'OperatorMSP.peer', 'OperatorMSP.client')"
+            Writers:
+                Type: Signature
+                Rule: "OR('OperatorMSP.admin', 'OperatorMSP.client')"
+            Admins:
+                Type: Signature
+                Rule: "OR('OperatorMSP.admin')"
+            Endorsement:
+                Type: Signature
+                Rule: "OR('OperatorMSP.peer')"
 
 ################################################################################
 #
@@ -311,4 +338,5 @@ Profiles:
             Organizations:
                 - *Org1
                 - *Org2
+                - *Operator
             Capabilities: *ApplicationCapabilities

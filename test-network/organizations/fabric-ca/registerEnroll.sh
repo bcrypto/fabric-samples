@@ -278,11 +278,11 @@ function createOpepatorOrg() {
   cp "${PWD}/organizations/fabric-ca/operator/ca-cert.pem" "${PWD}/organizations/peerOrganizations/operator.by/msp/tlscacerts/ca.crt"
 
   # Copy operator's CA cert to operator's /tlsca directory (for use by clients)
-  mkdir -p "${PWD}/organizations/peerOrganizations/operator/tlsca"
+  mkdir -p "${PWD}/organizations/peerOrganizations/operator.by/tlsca"
   cp "${PWD}/organizations/fabric-ca/operator/ca-cert.pem" "${PWD}/organizations/peerOrganizations/operator.by/tlsca/tlsca.operator.by-cert.pem"
 
   # Copy operator's CA cert to operator's /ca directory (for use by clients)
-  mkdir -p "${PWD}/organizations/peerOrganizations/operator/ca"
+  mkdir -p "${PWD}/organizations/peerOrganizations/operator.by/ca"
   cp "${PWD}/organizations/fabric-ca/operator/ca-cert.pem" "${PWD}/organizations/peerOrganizations/operator.by/ca/ca.operator.by-cert.pem"
 
   infoln "Registering peer0"

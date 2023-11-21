@@ -179,6 +179,16 @@ function createOrgs() {
       fatalln "Failed to generate certificates..."
     fi
 
+    infoln "Creating Operator Identities"
+
+    set -x
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-operator.yaml --output="organizations"
+    res=$?
+    { set +x; } 2>/dev/null
+    if [ $res -ne 0 ]; then
+      fatalln "Failed to generate certificates..."
+    fi
+
   fi
 
   # Create crypto material using Fabric CA
@@ -208,6 +218,10 @@ function createOrgs() {
     infoln "Creating Orderer Org Identities"
 
     createOrderer
+
+    infoln "Creating Operator Org Identities"
+
+    createOpepatorOrg
 
   fi
 

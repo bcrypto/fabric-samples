@@ -17,16 +17,16 @@ createAnchorPeerUpdate() {
 
   infoln "Generating anchor peer update transaction for Org${ORG} on channel $CHANNEL_NAME"
 
-  if [ $ORG -eq org1 ]; then
+  if [ $ORG == org1 ]; then
     HOST="peer0.org1.example.com"
     PORT=7051
-  elif [ $ORG -eq org2 ]; then
+  elif [ $ORG == org2 ]; then
     HOST="peer0.org2.example.com"
     PORT=9051
-  elif [ $ORG -eq org3 ]; then
+  elif [ $ORG == org3 ]; then
     HOST="peer0.org3.example.com"
     PORT=11051
-  elif [ $ORG -eq operator ]; then
+  elif [ $ORG == operator ]; then
     HOST="peer0.operator.example.com"
     PORT=11051
   else

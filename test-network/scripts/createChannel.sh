@@ -69,7 +69,7 @@ joinChannel() {
 		COUNTER=$(expr $COUNTER + 1)
 	done
 	cat log.txt
-	verifyResult $res "After $MAX_RETRY attempts, peer0.org${ORG} has failed to join channel '$CHANNEL_NAME' "
+	verifyResult $res "After $MAX_RETRY attempts, peer0.${ORG} has failed to join channel '$CHANNEL_NAME' "
 }
 
 setAnchorPeer() {
@@ -93,14 +93,18 @@ successln "Channel '$CHANNEL_NAME' created"
 
 ## Join all the peers to the channel
 infoln "Joining org1 peer to the channel..."
-joinChannel 1
+joinChannel org1
 infoln "Joining org2 peer to the channel..."
-joinChannel 2
+joinChannel org2
+infoln "Joining operator peer to the channel..."
+joinChannel operator
 
 ## Set the anchor peers for each org in the channel
 infoln "Setting anchor peer for org1..."
-setAnchorPeer 1
+setAnchorPeer org1
 infoln "Setting anchor peer for org2..."
-setAnchorPeer 2
+setAnchorPeer org2
+infoln "Setting anchor peer for operator..."
+setAnchorPeer operator
 
 successln "Channel '$CHANNEL_NAME' joined"

@@ -20,7 +20,7 @@ VERBOSE="$4"
 : ${TIMEOUT:="10"}
 : ${VERBOSE:="false"}
 COUNTER=1
-MAX_RETRY=5
+MAX_RETRY=10
 
 # import environment variables
 . scripts/envVar.sh

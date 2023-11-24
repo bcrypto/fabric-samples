@@ -34,7 +34,7 @@ createChannelGenesisBlock() {
 }
 
 createChannel() {
-	setGlobals Org1
+	setGlobals org1
 	# Poll in case the raft leader is not set yet
 	local rc=1
 	local COUNTER=1

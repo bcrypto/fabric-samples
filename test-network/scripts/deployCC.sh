@@ -156,36 +156,27 @@ approveForMyOrg org1
 
 ## check whether the chaincode definition is ready to be committed
 ## expect org1 to have approved and org2, operator not to
-checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
-checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
-checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": false" "\"Operator\": false"
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"OperatorMSP\": false"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": false" "\"OperatorMSP\": false"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": false" "\"OperatorMSP\": false"
 
 ## now approve also for org2
 approveForMyOrg org2
 
 ## check whether the chaincode definition is ready to be committed
 ## expect them both to have approved (not operator)
-checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
-checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
-checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": false"
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": false"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": false"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": false"
 
 ## now approve also for operator
 approveForMyOrg operator
 
 ## check whether the chaincode definition is ready to be committed
 ## expect them all to have approved
-checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
-checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
-checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
-
-## now approve also for operator
-approveForMyOrg operator
-
-## check whether the chaincode definition is ready to be committed
-## expect them all to have approved
-checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
-checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
-checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"Operator\": true"
+checkCommitReadiness org1 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": true"
+checkCommitReadiness org2 "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": true"
+checkCommitReadiness operator "\"Org1MSP\": true" "\"Org2MSP\": true" "\"OperatorMSP\": true"
 
 ## now that we know for sure both orgs have approved, commit the definition
 commitChaincodeDefinition org1 org2 operator

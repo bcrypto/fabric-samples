@@ -62,7 +62,7 @@ public class App {
 	}
 
 	public static void main(String[] args) {
-		String userName = "shipper";//args[0];
+		String userName = "ccchipper";//args[0];
 		String jsonFile = "shipper.json";
 		System.out.println("Start application as " + jsonFile);
 		Organization shipper = null;
@@ -92,7 +92,7 @@ public class App {
 			byte[] result;
 
 			System.out.println("Evaluate Transaction: Reserve waybill");
-			result = contract.evaluateTransaction("ReserveWaybillId");
+			result = contract.evaluateTransaction("ReserveWaybill");
 			var id = new String(result);
 			System.out.println("Reserved waybill with id " + id);
 		}

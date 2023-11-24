@@ -31,9 +31,9 @@ public class RegisterUser {
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
 		props.put("pemFile",
-			"../../test-network/organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem");
+			"../../test-network/organizations/peerOrganizations/operator.by/ca/ca.operator.by-cert.pem");
 		props.put("allowAllHostNames", "true");
-		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:7054", props);
+		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:11054", props);
 		CryptoSuite cryptoSuite = CryptoSuiteFactory.getDefault().getCryptoSuite();
 		caClient.setCryptoSuite(cryptoSuite);
 
@@ -70,7 +70,7 @@ public class RegisterUser {
 
 			@Override
 			public String getAffiliation() {
-				return "org1.department1";
+				return "operator.department1";
 			}
 
 			@Override
@@ -91,14 +91,14 @@ public class RegisterUser {
 
 			@Override
 			public String getMspId() {
-				return "Org1MSP";
+				return "OperatorMSP";
 			}
 
 		};
 
 		// Register the user, enroll the user, and import the new identity into the wallet.
 		RegistrationRequest registrationRequest = new RegistrationRequest(userName);
-		registrationRequest.setAffiliation("org1.department1");
+		registrationRequest.setAffiliation("operator.department1");
 		registrationRequest.setEnrollmentID(userName);
 		for (var entry : organization.getAttributes().entrySet()) {
 			registrationRequest.addAttribute(new Attribute(entry.getKey(), entry.getValue()));
@@ -106,7 +106,7 @@ public class RegisterUser {
 
 		String enrollmentSecret = caClient.register(registrationRequest, admin);
 		Enrollment enrollment = caClient.enroll(userName, enrollmentSecret);
-		Identity user = Identities.newX509Identity("Org1MSP", enrollment);
+		Identity user = Identities.newX509Identity("OperatorMSP", enrollment);
 		wallet.put(userName, user);
 		System.out.println("Successfully enrolled user \"" + userName +"\" and imported it into the wallet");
 	}

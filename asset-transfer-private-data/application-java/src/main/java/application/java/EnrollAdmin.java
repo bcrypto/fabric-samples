@@ -29,9 +29,9 @@ public class EnrollAdmin {
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
 		props.put("pemFile",
-			"../../test-network/organizations/peerOrganizations/org1.example.com/ca/ca.org1.example.com-cert.pem");
+			"../../test-network/organizations/peerOrganizations/operator.by/ca/ca.operator.by-cert.pem");
 		props.put("allowAllHostNames", "true");
-		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:7054", props);
+		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:11054", props);
 		CryptoSuite cryptoSuite = CryptoSuiteFactory.getDefault().getCryptoSuite();
 		caClient.setCryptoSuite(cryptoSuite);
 
@@ -52,7 +52,7 @@ public class EnrollAdmin {
 		enrollmentRequestTLS.addHost("localhost");
 		enrollmentRequestTLS.setProfile("tls");
 		Enrollment enrollment = caClient.enroll("admin", "adminpw", enrollmentRequestTLS);
-		Identity user = Identities.newX509Identity("Org1MSP", enrollment);
+		Identity user = Identities.newX509Identity("OperatorMSP", enrollment);
 		wallet.put("admin", user);
 		System.out.println("Successfully enrolled user \"admin\" and imported it into the wallet");
 	}

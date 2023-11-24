@@ -10,7 +10,7 @@ MAX_RETRY="$3"
 VERBOSE="$4"
 : ${CHANNEL_NAME:="mychannel"}
 : ${DELAY:="3"}
-: ${MAX_RETRY:="10"}
+: ${MAX_RETRY:="5"}
 : ${VERBOSE:="false"}
 
 : ${CONTAINER_CLI:="docker"}

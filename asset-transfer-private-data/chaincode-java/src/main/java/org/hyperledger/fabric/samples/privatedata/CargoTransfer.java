@@ -260,11 +260,11 @@ public final class CargoTransfer implements ContractInterface {
 
     private String getCollectionName(final Context ctx) {
         String clientMSPID = ctx.getClientIdentity().getMSPID();
-        if (clientMSPID == ShipperRole) {
+        if (clientMSPID.equals(ShipperRole)) {
             return ShipperCarrierCollectionName;
-        } else if (clientMSPID == CarrierRole) {
+        } else if (clientMSPID.equals(CarrierRole)) {
             return ShipperCarrierCollectionName;
-        } else if (clientMSPID == ReceiverRole) {
+        } else if (clientMSPID.equals(ReceiverRole)) {
             return CarrierReceiverCollectionName;
         } else {
             String errorMessage = String.format("Client from org %s is not authorized to read or write private data", clientMSPID);
@@ -275,7 +275,7 @@ public final class CargoTransfer implements ContractInterface {
 
     private void verifyUserRole(ClientIdentity user, Role expectedRole) {
         var actualRole = user.getAttributeValue(RoleAttributeName);
-        if (actualRole != expectedRole.toString()) {
+        if (!actualRole.equals(expectedRole.toString())) {
             throw new ChaincodeException("For this action Role must be " + expectedRole + " but it was " + actualRole);
         }
     }

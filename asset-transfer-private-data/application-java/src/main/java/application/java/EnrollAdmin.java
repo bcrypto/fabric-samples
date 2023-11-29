@@ -49,6 +49,9 @@ public class EnrollAdmin {
 
 		// Enroll the admin user, and import the new identity into the wallet.
 		final EnrollmentRequest enrollmentRequestTLS = new EnrollmentRequest();
+		enrollmentRequestTLS.addAttrReq("CCC");
+		enrollmentRequestTLS.addAttrReq("GLN");
+		enrollmentRequestTLS.addAttrReq("ROLE");
 		enrollmentRequestTLS.addHost("localhost");
 		enrollmentRequestTLS.setProfile("tls");
 		Enrollment enrollment = caClient.enroll("admin", "adminpw", enrollmentRequestTLS);

@@ -101,11 +101,12 @@ public class RegisterUser {
 		registrationRequest.setAffiliation("operator.department1");
 		registrationRequest.setEnrollmentID(userName);
 		for (var entry : organization.getAttributes().entrySet()) {
-			registrationRequest.addAttribute(new Attribute(entry.getKey(), entry.getValue()));
+			registrationRequest.addAttribute(new Attribute(entry.getKey(), entry.getValue(), true));
 		}
 
 		String enrollmentSecret = caClient.register(registrationRequest, admin);
 		Enrollment enrollment = caClient.enroll(userName, enrollmentSecret);
+
 		Identity user = Identities.newX509Identity("OperatorMSP", enrollment);
 		wallet.put(userName, user);
 		System.out.println("Successfully enrolled user \"" + userName +"\" and imported it into the wallet");

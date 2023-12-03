@@ -4,59 +4,51 @@ import org.hyperledger.fabric.contract.annotation.DataType;
 
 @DataType()
 public final class Waybill {
-    private final String Id;
-    private final Organization Shipper;
-    private final Organization Carrier;
-    private final Organization Receiver;
+    private String id;
+    private String shipperGLN;
+    private String carrierGLN;
+    private String receiverGLN;
+    private String xmlData;
 
-    private String ShipperSignature;
-    private String CarrierSignature;
-    private String ReceiverSignature;
-
-    public Waybill(String id, Organization shipper, Organization carrier, Organization receiver) {
-        Id = id;
-        Shipper = shipper;
-        Carrier = carrier;
-        Receiver = receiver;
+    public Waybill(){}
+    public Waybill(String id, String shipperGLN, String carrierGLN, String receiverGLN, String xmlData) {
+        this.id = id;
+        this.shipperGLN = shipperGLN;
+        this.carrierGLN = carrierGLN;
+        this.receiverGLN = receiverGLN;
+        this.xmlData = xmlData;
     }
 
     public String getId() {
-        return Id;
+        return id;
+    }
+    public void setId(String id) {
+        this.id = id;
     }
 
-    public Organization getShipper() {
-        return Shipper;
+    public String getShipperGLN() {
+        return shipperGLN;
+    }
+    public void setShipperGLN(String shipperGLN) {
+        this.shipperGLN = shipperGLN;
     }
 
-    public Organization getCarrier() {
-        return Carrier;
+    public String getCarrierGLN() {
+        return carrierGLN;
+    }
+    public void setCarrierGLN(String carrierGLN) {
+        this.carrierGLN = carrierGLN;
     }
 
-    public Organization getReceiver() {
-        return Receiver;
+    public String getReceiverGLN() {
+        return receiverGLN;
+    }
+    public void setReceiverGLN(String receiverGLN) {
+        this.receiverGLN = receiverGLN;
     }
 
-    public String getShipperSignature() {
-        return ShipperSignature;
-    }
-
-    public void setShipperSignature(String shipperSignature) {
-        ShipperSignature = shipperSignature;
-    }
-
-    public String getCarrierSignature() {
-        return CarrierSignature;
-    }
-
-    public void setCarrierSignature(String carrierSignature) {
-        CarrierSignature = carrierSignature;
-    }
-
-    public String getReceiverSignature() {
-        return ReceiverSignature;
-    }
-
-    public void setReceiverSignature(String receiverSignature) {
-        ReceiverSignature = receiverSignature;
+    public String getXmlData() { return xmlData; }
+    public void setXmlData(String xmlData) {
+        this.xmlData = xmlData;
     }
 }

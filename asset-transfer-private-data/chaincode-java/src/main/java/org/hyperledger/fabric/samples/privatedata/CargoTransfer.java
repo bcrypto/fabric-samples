@@ -10,6 +10,7 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
 
+import javax.swing.plaf.synth.SynthTextAreaUI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,13 +34,13 @@ public final class CargoTransfer implements ContractInterface {
     private final static String CarrierRole = "CARRIER";
     private final static String ReceiverRole = "RECEIVER";
     private final static String TransferPropertiesKey = "transfer_properties";
+    private final static String WaybillIdCollectionName= "WAYBILL_ID_COLLECTION";
     private final static String ShipperCarrierCollectionName = "SHIPPER_CARRIER_COLLECTION";
     private final static String CarrierReceiverCollectionName = "CARRIER_RECEIVER_COLLECTION";
 
     private final Genson genson = new Genson();
-    private int id = 0;
 
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
     public String ReserveWaybill(final Context ctx)
     {
         ChaincodeStub stub = ctx.getStub();
@@ -47,13 +48,13 @@ public final class CargoTransfer implements ContractInterface {
         verifyUserRole(user, Role.SHIPPER);
         String ccc = getCCC(user);
         String gln = getGLN(user);
-        String id = reserveWaybillId(user);
+        String id = reserveWaybillId(user, stub);
 
         return ccc + "-" + gln + "-" + id;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill InitTransfer(final Context ctx, final String shipperSignature) {
+    public Waybill InitTransfer(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -61,17 +62,14 @@ public final class CargoTransfer implements ContractInterface {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
-       /* ClientIdentity user;
+        ClientIdentity user;
         try {
             user = new ClientIdentity(stub);
         } catch (Exception e) {
             throw new ChaincodeException("Can't verify user");
         }
 
-        var role = user.getAttributeValue(RoleAttributeName);
-        if (role != ShipperRole) {
-            throw new ChaincodeException("For this action Role must be " + ShipperRole + "but it was " + role);
-        }*/
+        verifyUserRole(user, Role.SHIPPER);
 
         String transientWaybillJSON = new String(transientMap.get(TransferPropertiesKey), UTF_8);
         final Waybill waybill;
@@ -80,21 +78,22 @@ public final class CargoTransfer implements ContractInterface {
         } catch (Exception err) {
             String errorMessage = String.format("TransientMap deserialized error: %s ", err);
             System.err.println(errorMessage);
-            throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
+            System.err.println(transientWaybillJSON);
+            throw new ChaincodeException(transientWaybillJSON, Errors.INCOMPLETE_INPUT.toString());
         }
 
         //input validations
         String errorMessage = null;
-        if (waybill.getCarrier() == null) {
+        if (waybill.getCarrierGLN() == null) {
             errorMessage = String.format("Empty input in Transient map: carrier");
         }
         if (waybill.getId().equals("")) {
             errorMessage = String.format("Empty input in Transient map: id");
         }
-        if (waybill.getReceiver() == null) {
+        if (waybill.getReceiverGLN() == null) {
             errorMessage = String.format("Empty input in Transient map: receiver");
         }
-        if (waybill.getShipper() == null) {
+        if (waybill.getShipperGLN() == null) {
             errorMessage = String.format("Empty input in Transient map: shipper");
         }
 
@@ -103,7 +102,7 @@ public final class CargoTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(transientWaybillJSON, shipperSignature);
+        boolean isSignatureValid = verifySignature(waybill.getXmlData());
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
@@ -115,7 +114,7 @@ public final class CargoTransfer implements ContractInterface {
         verifyClientOrgMatchesPeerOrg(ctx);
 
         // Make submitting client the owner
-        waybill.setShipperSignature(shipperSignature);
+        //waybill.setShipperSignature(shipperSignature);
         String serializedWaybill = genson.serialize(waybill);
         System.out.printf("InitTransfer Put: collection %s, ID %s\n", ShipperCarrierCollectionName, waybill.getId());
         System.out.printf("Put: collection %s, ID %s\n", ShipperCarrierCollectionName, serializedWaybill);
@@ -126,7 +125,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill AgreeByCarrier(final Context ctx, final String carrierSignature) {
+    public Waybill AgreeByCarrier(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -147,21 +146,17 @@ public final class CargoTransfer implements ContractInterface {
 
         //input validations
         String errorMessage = null;
-        if (waybill.getShipperSignature().equals("")) {
-            errorMessage = String.format("Empty input in Transient map: shipperSignature");
-        }
 
         if (errorMessage != null) {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(transientWaybillJSON, carrierSignature);
+        boolean isSignatureValid = verifySignature(transientWaybillJSON);
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
         }
-        waybill.setCarrierSignature(carrierSignature);
 
         verifyClientOrgMatchesPeerOrg(ctx);
 
@@ -173,7 +168,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill AgreeByReceiver(final Context ctx, final String receiverSignature) {
+    public Waybill AgreeByReceiver(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -194,21 +189,17 @@ public final class CargoTransfer implements ContractInterface {
 
         //input validations
         String errorMessage = null;
-        if (waybill.getCarrierSignature().equals("")) {
-            errorMessage = String.format("Empty input in Transient map: shipperSignature");
-        }
 
         if (errorMessage != null) {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(transientWaybillJSON, receiverSignature);
+        boolean isSignatureValid = verifySignature(transientWaybillJSON);
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
         }
-        waybill.setReceiverSignature(receiverSignature);
 
         verifyClientOrgMatchesPeerOrg(ctx);
 
@@ -243,31 +234,35 @@ public final class CargoTransfer implements ContractInterface {
     }
 
 
-    private static boolean verifySignature(String waybill, String signature) {
+    private static boolean verifySignature(String xmlData) {
+        //
         return true;
     }
 
     private void verifyClientOrgMatchesPeerOrg(final Context ctx) {
-        String clientMSPID = ctx.getClientIdentity().getMSPID();
+        return;
+       /* String clientMSPID = ctx.getClientIdentity().getMSPID();
         String peerMSPID = ctx.getStub().getMspId();
 
         if (!peerMSPID.equals(clientMSPID)) {
             String errorMessage = String.format("Client from org %s is not authorized to read or write private data from an org %s peer", clientMSPID, peerMSPID);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INVALID_ACCESS.toString());
-        }
+        }*/
     }
 
     private String getCollectionName(final Context ctx) {
-        String clientMSPID = ctx.getClientIdentity().getMSPID();
-        if (clientMSPID.equals(ShipperRole)) {
+        ChaincodeStub stub = ctx.getStub();
+        ClientIdentity user = getUser(stub);
+        var role = getRole(user);
+        if (role.equals(ShipperRole)) {
             return ShipperCarrierCollectionName;
-        } else if (clientMSPID.equals(CarrierRole)) {
+        } else if (role.equals(CarrierRole)) {
             return ShipperCarrierCollectionName;
-        } else if (clientMSPID.equals(ReceiverRole)) {
+        } else if (role.equals(ReceiverRole)) {
             return CarrierReceiverCollectionName;
         } else {
-            String errorMessage = String.format("Client from org %s is not authorized to read or write private data", clientMSPID);
+            String errorMessage = String.format("Client with role %s is not authorized to read or write private data", role);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INVALID_ACCESS.toString());
         }
@@ -295,12 +290,31 @@ public final class CargoTransfer implements ContractInterface {
         return user.getAttributeValue("CCC");
     }
 
+    private String getRole(ClientIdentity user) {
+        return user.getAttributeValue("ROLE");
+    }
+
     private String getGLN(ClientIdentity user){
         return user.getAttributeValue("GLN");
     }
 
-    private String reserveWaybillId(ClientIdentity user){
-        return "1";
+    private String reserveWaybillId(ClientIdentity user, ChaincodeStub stub) {
+        var id = 0;
+        var bytes = stub.getPrivateData(WaybillIdCollectionName, getGLN(user));
+        if (bytes != null && bytes.length != 0) {
+            id = Integer.parseInt(new String(bytes, UTF_8));
+        }
+
+        id++;
+        var stringId = Integer.toString(id);
+        stub.putPrivateData(WaybillIdCollectionName, getGLN(user), stringId.getBytes(UTF_8));
+
+        return stringId;
+    }
+
+    private boolean verifyShipperSignature(String xmlData) {
+        //todo verifySignature
+        return true;
     }
 
 }

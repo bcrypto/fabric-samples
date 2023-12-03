@@ -135,6 +135,9 @@ registry:
           hf.GenCRL: true
           hf.Registrar.Attributes: "*"
           hf.AffiliationMgr: true
+          ROLE: "*"
+          CCC: "*"
+          GLN: "*"
 
 #############################################################################
 #  Database section

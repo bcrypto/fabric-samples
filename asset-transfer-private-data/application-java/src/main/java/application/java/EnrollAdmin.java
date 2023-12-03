@@ -24,26 +24,23 @@ import org.hyperledger.fabric_ca.sdk.HFCAClient;
 
 public class EnrollAdmin {
 
-	public static void main(String[] args) throws Exception {
+	public static void enroll(RegistrationInfo registrationInfo) throws Exception {
 
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
 		props.put("pemFile",
-			"../../test-network/organizations/peerOrganizations/operator.by/ca/ca.operator.by-cert.pem");
+				"../../test-network/organizations/peerOrganizations/" + registrationInfo.getDomain() + "/ca/ca." + registrationInfo.getDomain() + "-cert.pem");
 		props.put("allowAllHostNames", "true");
-		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:11054", props);
+		HFCAClient caClient = HFCAClient.createNewInstance(registrationInfo.getCaClientUrl(), props);
 		CryptoSuite cryptoSuite = CryptoSuiteFactory.getDefault().getCryptoSuite();
 		caClient.setCryptoSuite(cryptoSuite);
-
-		// Delete wallet if it exists from prior runs
-		FileUtils.deleteDirectory(new File("wallet"));
 
 		// Create a wallet for managing identities	
 		Wallet wallet = Wallets.newFileSystemWallet(Paths.get("wallet"));
 
 		// Check to see if we've already enrolled the admin user.
-		if (wallet.get("admin") != null) {
-			System.out.println("An identity for the admin user \"admin\" already exists in the wallet");
+		if (wallet.get(registrationInfo.getAdminName()) != null) {
+			System.out.println("An identity for the admin user " + registrationInfo.getAdminName() + " already exists in the wallet");
 			return;
 		}
 
@@ -55,8 +52,8 @@ public class EnrollAdmin {
 		enrollmentRequestTLS.addHost("localhost");
 		enrollmentRequestTLS.setProfile("tls");
 		Enrollment enrollment = caClient.enroll("admin", "adminpw", enrollmentRequestTLS);
-		Identity user = Identities.newX509Identity("OperatorMSP", enrollment);
-		wallet.put("admin", user);
-		System.out.println("Successfully enrolled user \"admin\" and imported it into the wallet");
+		Identity user = Identities.newX509Identity(registrationInfo.getMspId(), enrollment);
+		wallet.put(registrationInfo.getAdminName(), user);
+		System.out.println("Successfully enrolled user " + registrationInfo.getAdminName() + " and imported it into the wallet");
 	}
 }

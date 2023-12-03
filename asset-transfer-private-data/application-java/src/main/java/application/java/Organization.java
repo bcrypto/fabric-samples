@@ -4,7 +4,7 @@ import java.util.Map;
 
 public class Organization {
     private String name;
-    private Map<String, String> Attributes;
+    private Map<String, String> attributes;
 
     public String getName() {
         return name;
@@ -15,10 +15,14 @@ public class Organization {
     }
 
     public Map<String, String> getAttributes() {
-        return Attributes;
+        return attributes;
     }
 
     public void setAttributes(Map<String, String> attributes) {
-        Attributes = attributes;
+        this.attributes = attributes;
+    }
+
+    public String getGLN(){
+        return attributes.get("GLN");
     }
 }

@@ -2,7 +2,7 @@
   "name": "shipper",
   "attributes": {
     "ROLE": "SHIPPER",
-    "GLN": "1234567890123",
-    "CCC": "123"
+    "GLN": "shipperGLN",
+    "CCC": "shipperCCC"
   }
 }

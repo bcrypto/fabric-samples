@@ -1,0 +1,8 @@
+{
+  "name": "carrier",
+  "attributes": {
+    "ROLE": "CARRIER",
+    "GLN": "carrierGLN",
+    "CCC": "carrierCCC"
+  }
+}

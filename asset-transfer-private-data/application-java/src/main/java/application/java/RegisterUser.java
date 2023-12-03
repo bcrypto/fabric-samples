@@ -5,9 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 package application.java;
 
 import java.nio.file.Paths;
-import java.security.PrivateKey;
 import java.util.Properties;
-import java.util.Set;
 
 import org.hyperledger.fabric.gateway.Wallet;
 import org.hyperledger.fabric.gateway.Wallets;
@@ -26,14 +24,14 @@ public class RegisterUser {
 
 	private final static String RoleAttributeName = "ROLE";
 
-	public static void main(Organization organization, String userName) throws Exception {
-		//var userName = organization.getName();
+	public static void register(RegistrationInfo registrationInfo, Organization organization) throws Exception {
+		var userName = organization.getName();
 		// Create a CA client for interacting with the CA.
 		Properties props = new Properties();
 		props.put("pemFile",
-			"../../test-network/organizations/peerOrganizations/operator.by/ca/ca.operator.by-cert.pem");
+			"../../test-network/organizations/peerOrganizations/"+ registrationInfo.getDomain() +"/ca/ca."+ registrationInfo.getDomain() +"-cert.pem");
 		props.put("allowAllHostNames", "true");
-		HFCAClient caClient = HFCAClient.createNewInstance("https://localhost:11054", props);
+		HFCAClient caClient = HFCAClient.createNewInstance(registrationInfo.getCaClientUrl(), props);
 		CryptoSuite cryptoSuite = CryptoSuiteFactory.getDefault().getCryptoSuite();
 		caClient.setCryptoSuite(cryptoSuite);
 
@@ -46,59 +44,16 @@ public class RegisterUser {
 			return;
 		}
 
-		X509Identity adminIdentity = (X509Identity)wallet.get("admin");
+		X509Identity adminIdentity = (X509Identity)wallet.get(registrationInfo.getAdminName());
 		if (adminIdentity == null) {
-			System.out.println("\"admin\" needs to be enrolled and added to the wallet first");
+			System.out.println(registrationInfo.getAdminName() + " needs to be enrolled and added to the wallet first");
 			return;
 		}
-		User admin = new User() {
-
-			@Override
-			public String getName() {
-				return "admin";
-			}
-
-			@Override
-			public Set<String> getRoles() {
-				return null;
-			}
-
-			@Override
-			public String getAccount() {
-				return null;
-			}
-
-			@Override
-			public String getAffiliation() {
-				return "operator.department1";
-			}
-
-			@Override
-			public Enrollment getEnrollment() {
-				return new Enrollment() {
-
-					@Override
-					public PrivateKey getKey() {
-						return adminIdentity.getPrivateKey();
-					}
-
-					@Override
-					public String getCert() {
-						return Identities.toPemString(adminIdentity.getCertificate());
-					}
-				};
-			}
-
-			@Override
-			public String getMspId() {
-				return "OperatorMSP";
-			}
-
-		};
+		User admin = new AdminUser(registrationInfo, adminIdentity);
 
 		// Register the user, enroll the user, and import the new identity into the wallet.
 		RegistrationRequest registrationRequest = new RegistrationRequest(userName);
-		registrationRequest.setAffiliation("operator.department1");
+		registrationRequest.setAffiliation(registrationInfo.getAffiliation());
 		registrationRequest.setEnrollmentID(userName);
 		for (var entry : organization.getAttributes().entrySet()) {
 			registrationRequest.addAttribute(new Attribute(entry.getKey(), entry.getValue(), true));
@@ -107,7 +62,7 @@ public class RegisterUser {
 		String enrollmentSecret = caClient.register(registrationRequest, admin);
 		Enrollment enrollment = caClient.enroll(userName, enrollmentSecret);
 
-		Identity user = Identities.newX509Identity("OperatorMSP", enrollment);
+		Identity user = Identities.newX509Identity(registrationInfo.getMspId(), enrollment);
 		wallet.put(userName, user);
 		System.out.println("Successfully enrolled user \"" + userName +"\" and imported it into the wallet");
 	}

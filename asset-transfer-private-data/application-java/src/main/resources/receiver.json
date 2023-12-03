@@ -1,0 +1,8 @@
+{
+  "name": "receiver",
+  "attributes": {
+    "ROLE": "RECEIVER",
+    "GLN": "receiverGLN",
+    "CCC": "receiverCCC"
+  }
+}

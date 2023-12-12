@@ -7,6 +7,8 @@ package org.hyperledger.fabric.samples.events;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
@@ -32,7 +34,14 @@ public final class Note {
     private String asset;
 
     @Property()
-    private String[] advices;
+    private ArrayList<String> advices;
+
+    public Note(final String ID, final String shipper, final String reciever) {
+        noteID = ID;
+        this.shipper = shipper;
+        this.reciever = reciever;
+        advices = new ArrayList();
+    }
 
     /**
      * @return String return the noteID
@@ -87,14 +96,22 @@ public final class Note {
      * @return String[] return the advices
      */
     public String[] getAdvices() {
-        return advices;
+        return (String[]) advices.toArray();
     }
 
     /**
      * @param advices the advices to set
      */
     public void setAdvices(String[] advices) {
-        this.advices = advices;
+        this.advices.clear();
+        this.advices.addAll(Arrays.asList(advices));
+    }
+
+    /**
+     * @param advices the advices to set
+     */
+    public void addAdvice(String advice) {
+        advices.add(advice);
     }
 
      // Serialize asset without private properties
@@ -108,7 +125,7 @@ public final class Note {
         tMap.put("Shipper",  shipper);
         tMap.put("Reciever",  reciever);
         tMap.put("Asset", asset);
-        tMap.put("Advices", advices);
+        tMap.put("Advices", advices.toArray());
         if (privateProps != null && privateProps.length() > 0) {
             tMap.put("asset_properties", new JSONObject(privateProps));
         }

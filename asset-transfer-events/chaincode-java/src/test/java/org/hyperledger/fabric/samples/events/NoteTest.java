@@ -42,6 +42,7 @@ public class NoteTest{
             StreamResult result = new StreamResult(writer);
             TransformerFactory tf = TransformerFactory.newInstance();
             Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
             transformer.setOutputProperty(OutputKeys.INDENT, "no");
             transformer.transform(domSource, result);
             return writer.toString();
@@ -91,7 +92,7 @@ public class NoteTest{
             assertNotNull(goods);
             dn.setAsset(goods);
             dn.addAdvice(str);
-            //System.out.println(dn.serialize("fields"));
+            System.out.println(dn.export());
         } catch(FileNotFoundException e1) {
             e1.printStackTrace(); 
         } catch(ParserConfigurationException e2) {

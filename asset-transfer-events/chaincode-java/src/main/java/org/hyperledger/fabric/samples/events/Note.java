@@ -132,6 +132,14 @@ public final class Note {
         return new JSONObject(tMap).toString();
     }
 
+    public String export() {
+        String result = "<DELNOTE>\n" 
+            + String.join("\n", advices)
+            + "\n<ITEMS>\n" + asset + "\n</ITEMS>\n"
+            + "</DELNOTE>";
+        return result;
+    }
+
     public static Note deserialize(final byte[] assetJSON) {
         return deserialize(new String(assetJSON, UTF_8));
     }

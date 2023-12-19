@@ -58,8 +58,8 @@ public final class App {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
 			var firstBlockNumber = createAsset();
-			updateAsset();
-			transferAsset();
+			updateAsset("<EMPTY/>");
+			transferAsset("<EMPTY/>");
 			deleteAsset();
 
 			// Replay events from the block containing the first transaction
@@ -92,10 +92,10 @@ public final class App {
 	}
 
 	private long createAsset() throws EndorseException, SubmitException, CommitStatusException {
-		System.out.println("\n--> Submit transaction: CreateAsset, " + assetId + " owned by Sam with appraised value 100");
+		System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
 
-		var commit = contract.newProposal("CreateAsset")
-				.addArguments(assetId, "blue", "10", "Sam", "100")
+		var commit = contract.newProposal("CreateNote")
+				.addArguments(assetId, "10", "100")
 				.build()
 				.endorse()
 				.submitAsync();
@@ -110,28 +110,28 @@ public final class App {
 		return status.getBlockNumber();
 	}
 
-	private void updateAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: UpdateAsset, " + assetId + " update appraised value to 200");
+	private void updateAsset(String asset) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		System.out.println("\n--> Submit transaction: UpdateItems for " + assetId);
 
-		contract.submitTransaction("UpdateAsset", assetId, "blue", "10", "Sam", "200");
+		contract.submitTransaction("UpdateItems", assetId, asset);
 
-		System.out.println("\n*** UpdateAsset committed successfully");
+		System.out.println("\n*** UpdateItems committed successfully");
 	}
 
-	private void transferAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: TransferAsset, " + assetId + " to Mary");
+	private void transferAsset(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
-		contract.submitTransaction("TransferAsset", assetId, "Mary");
+		contract.submitTransaction("AddAdvice", assetId, advice);
 
-		System.out.println("\n*** TransferAsset committed successfully");
+		System.out.println("\n*** AddAdvice committed successfully");
 	}
 
 	private void deleteAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: DeleteAsset, " + assetId);
+		System.out.println("\n--> Submit transaction: DeleteNote, " + assetId);
 
-		contract.submitTransaction("DeleteAsset", assetId);
+		contract.submitTransaction("DeleteNote", assetId);
 
-		System.out.println("\n*** DeleteAsset committed successfully");
+		System.out.println("\n*** DeleteNote committed successfully");
 	}
 
 	private void replayChaincodeEvents(final long startBlock) {
@@ -147,7 +147,7 @@ public final class App {
 				var payload = prettyJson(event.getPayload());
 				System.out.println("\n<-- Chaincode event replayed: " + event.getEventName() + " - " + payload);
 
-				if (event.getEventName().equals("DeleteAsset")) {
+				if (event.getEventName().equals("DeleteNote")) {
 					// Reached the last submitted transaction so break to close the iterator and stop listening for events
 					break;
 				}

@@ -8,15 +8,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
 
-
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 @DataType()
 public final class Note {
@@ -58,10 +57,10 @@ public final class Note {
     }
 
     /**
-     * @param shipper the shipper to set
+     * @param shipperName the shipper to set
      */
-    public void setShipper(String shipper) {
-        this.shipper = shipper;
+    public void setShipper(final String shipperName) {
+        shipper = shipperName;
     }
 
     /**
@@ -72,10 +71,10 @@ public final class Note {
     }
 
     /**
-     * @param reciever the reciever to set
+     * @param recieverName the reciever to set
      */
-    public void setReciever(String reciever) {
-        this.reciever = reciever;
+    public void setReciever(final String recieverName) {
+        this.reciever = recieverName;
     }
 
     /**
@@ -88,29 +87,29 @@ public final class Note {
     /**
      * @param asset the asset to set
      */
-    public void setAsset(String asset) {
-        this.asset = asset;
+    public void setAsset(final String assetValue) {
+        asset = assetValue;
     }
 
     /**
      * @return String[] return the advices
      */
-    public String[] getAdvices() {
-        return (String[]) advices.toArray();
+    public ArrayList<String> getAdvices() {
+        return advices;
     }
 
     /**
      * @param advices the advices to set
      */
-    public void setAdvices(String[] advices) {
-        this.advices.clear();
-        this.advices.addAll(Arrays.asList(advices));
+    public void setAdvices(final ArrayList<String> advicesList) {
+        advices.clear();
+        advices.addAll(advicesList);
     }
 
     /**
      * @param advices the advices to set
      */
-    public void addAdvice(String advice) {
+    public void addAdvice(final String advice) {
         advices.add(advice);
     }
 
@@ -133,7 +132,7 @@ public final class Note {
     }
 
     public String export() {
-        String result = "<DELNOTE>\n" 
+        String result = "<DELNOTE>\n"
             + String.join("\n", advices)
             + "\n<ITEMS>\n" + asset + "\n</ITEMS>\n"
             + "</DELNOTE>";
@@ -157,7 +156,12 @@ public final class Note {
             result.setAsset((String) tMap.get("Asset"));
         }
         if (tMap.containsKey("Advices")) {
-            result.setAdvices((String[]) tMap.get("Advices"));
+            JSONArray array = json.getJSONArray("Advices");
+            var list = new ArrayList<String>(array.length());
+            for (int i = 0; i < array.length(); i++) {
+                list.add(array.getString(i));
+            }
+            result.setAdvices(list);
         }
         return result;
     }
@@ -183,13 +187,13 @@ public final class Note {
 
     @Override
     public int hashCode() {
-        return Objects.hash(getID(), getShipper(), getReciever(), getAsset(), getAdvices());
+        return Objects.hash(getID(), getShipper(), getReciever(), getAsset(), String.join("\n", getAdvices()));
     }
 
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode())
-                + " [ID=" + noteID + ", shipper=" + shipper + ", reciever=" + reciever  
+                + " [ID=" + noteID + ", shipper=" + shipper + ", reciever=" + reciever
                 + ", asset=" + asset + ", advices=<...>]";
     }
 

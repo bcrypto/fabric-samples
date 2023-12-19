@@ -56,8 +56,8 @@ public final class NoteContract implements ContractInterface {
      * @return the asset found on the ledger. Returns error if asset is not found
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String ReadAsset(final Context ctx, final String assetID) {
-        System.out.printf("ReadAsset: ID %s\n", assetID);
+    public String ReadItems(final Context ctx, final String assetID) {
+        System.out.printf("ReadItems: ID %s\n", assetID);
 
         Note note = getState(ctx, assetID);
         //String privData = readPrivateData(ctx, assetID);
@@ -91,7 +91,7 @@ public final class NoteContract implements ContractInterface {
      * @return the created note
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Note CreateAsset(final Context ctx, final String assetID, final String shipper, final String reciever) {
+    public Note CreateNote(final Context ctx, final String assetID, final String shipper, final String reciever) {
         ChaincodeStub stub = ctx.getStub();
         // input validations
         String errorMessage = null;
@@ -112,7 +112,7 @@ public final class NoteContract implements ContractInterface {
         // Check if asset already exists
         byte[] assetJSON = ctx.getStub().getState(assetID);
         if (assetJSON != null && assetJSON.length > 0) {
-            errorMessage = String.format("Asset %s already exists", assetID);
+            errorMessage = String.format("Note %s already exists", assetID);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
         }
@@ -121,12 +121,12 @@ public final class NoteContract implements ContractInterface {
 
         savePrivateData(ctx, assetID);
         assetJSON = asset.serialize();
-        System.out.printf("CreateAsset Put: ID %s Data %s\n", assetID, new String(assetJSON));
+        System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));
 
         stub.putState(assetID, assetJSON);
         // add Event data to the transaction data. Event will be published after the block containing
         // this transaction is committed
-        stub.setEvent("CreateAsset", assetJSON);
+        stub.setEvent("CreateNote", assetJSON);
         return asset;
     }
 
@@ -179,7 +179,7 @@ public final class NoteContract implements ContractInterface {
      * @return the created asset
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Note UpdateAsset(final Context ctx, final String assetID, final String asset) {
+    public Note UpdateItems(final Context ctx, final String assetID, final String asset) {
         ChaincodeStub stub = ctx.getStub();
         // input validations
         String errorMessage = null;
@@ -198,11 +198,11 @@ public final class NoteContract implements ContractInterface {
             note.setAsset(asset);
         }
 
-        savePrivateData(ctx, assetID);
+        //savePrivateData(ctx, assetID);
         byte[] assetJSON = note.serialize();
-        System.out.printf("UpdateAsset Put: ID %s Data %s\n", assetID, new String(assetJSON));
+        System.out.printf("UpdateItems Put: ID %s Data %s\n", assetID, new String(assetJSON));
         stub.putState(assetID, assetJSON);
-        stub.setEvent("UpdateAsset", assetJSON); //publish Event
+        stub.setEvent("UpdateItems", assetJSON); //publish Event
         return note;
     }
 
@@ -222,7 +222,7 @@ public final class NoteContract implements ContractInterface {
         // delete private details of asset
         removePrivateData(ctx, assetID);
         stub.delState(assetID);         // delete the key from Statedb
-        stub.setEvent("DeleteAsset", asset.serialize()); // publish Event
+        stub.setEvent("DeleteNote", asset.serialize()); // publish Event
     }
 
     private Note getState(final Context ctx, final String assetID) {

@@ -198,7 +198,7 @@ public final class NoteContract implements ContractInterface {
             note.setAsset(asset);
         }
 
-        //savePrivateData(ctx, assetID);
+        savePrivateData(ctx, assetID);
         byte[] assetJSON = note.serialize();
         System.out.printf("UpdateItems Put: ID %s Data %s\n", assetID, new String(assetJSON));
         stub.putState(assetID, assetJSON);

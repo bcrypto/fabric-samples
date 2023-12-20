@@ -31,6 +31,65 @@ public final class App {
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
+	   //method to convert Document to String
+    public String getStringFromDocument(final Document doc) {
+        try {
+            DOMSource domSource = new DOMSource(doc);
+            StringWriter writer = new StringWriter();
+            StreamResult result = new StreamResult(writer);
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.setOutputProperty(OutputKeys.INDENT, "no");
+            transformer.transform(domSource, result);
+            return writer.toString();
+        } catch (TransformerException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    private String nodeToString(final Node node) {
+        StringWriter sw = new StringWriter();
+        try {
+            Transformer t = TransformerFactory.newInstance().newTransformer();
+            t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            t.setOutputProperty(OutputKeys.INDENT, "no");
+            t.transform(new DOMSource(node), new StreamResult(sw));
+        } catch (TransformerException te) {
+            System.out.println("nodeToString Transformer Exception");
+        }
+        return sw.toString();
+    }
+
+    private Document loadXML(final File file) throws FileNotFoundException {
+        Document doc = null;
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = dbf.newDocumentBuilder();
+            doc = builder.parse(new FileInputStream(file));
+        } catch (ParserConfigurationException e2) {
+            e2.printStackTrace();
+        } catch (SAXException e3) {
+            e3.printStackTrace();
+        } catch (IOException e4) {
+            e4.printStackTrace();
+        } 
+        return doc;
+    }
+
+    private String loadXMLNode(Document doc, String xpath) {
+        Node node = null;
+        try {
+            XPath xPath = XPathFactory.newInstance().newXPath();
+            String expression = "/DESADV/SG10";
+            node = (Node) xPath.compile(expression).evaluate(doc, XPathConstants.NODE);
+        } catch (XPathExpressionException e5) {
+            e5.printStackTrace();
+        }
+        return nodeToString(node);
+    }
+
 	public static void main(final String[] args) throws Exception {
 		var grpcChannel = Connections.newGrpcConnection();
 		var builder = Gateway.newInstance()
@@ -58,8 +117,13 @@ public final class App {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
 			var firstBlockNumber = createAsset();
-			updateAsset("<EMPTY/>");
-			transferAsset("<EMPTY/>");
+			File file = new File(classLoader.getResource("desadv.xml").getFile());
+            Document doc = loadXML(file);
+            String expression = "/DESADV/SG10";
+            String str = getStringFromDocument(doc);
+            String goods = loadXMLNode(doc, expression);
+			updateAsset(goods);
+			addAdvice(str);
 			deleteAsset();
 
 			// Replay events from the block containing the first transaction
@@ -118,7 +182,7 @@ public final class App {
 		System.out.println("\n*** UpdateItems committed successfully");
 	}
 
-	private void transferAsset(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+	private void addAdvice(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
 		contract.submitTransaction("AddAdvice", assetId, advice);

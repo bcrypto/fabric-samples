@@ -65,6 +65,34 @@ public final class NoteTest {
         return sw.toString();
     }
 
+    private Document loadXML(final File file) throws FileNotFoundException {
+        Document doc = null;
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = dbf.newDocumentBuilder();
+            doc = builder.parse(new FileInputStream(file));
+        } catch (ParserConfigurationException e2) {
+            e2.printStackTrace();
+        } catch (SAXException e3) {
+            e3.printStackTrace();
+        } catch (IOException e4) {
+            e4.printStackTrace();
+        } 
+        return doc;
+    }
+
+    private String loadXMLNode(Document doc, String xpath) {
+        Node node = null;
+        try {
+            XPath xPath = XPathFactory.newInstance().newXPath();
+            String expression = "/DESADV/SG10";
+            node = (Node) xPath.compile(expression).evaluate(doc, XPathConstants.NODE);
+        } catch (XPathExpressionException e5) {
+            e5.printStackTrace();
+        }
+        return nodeToString(node);
+    }
+
     @Test
     public void test1() {
         Note dn = new Note("01", "A", "B");
@@ -79,14 +107,10 @@ public final class NoteTest {
         ClassLoader classLoader = getClass().getClassLoader();
         try {
             File file = new File(classLoader.getResource("desadv.xml").getFile());
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = dbf.newDocumentBuilder();
-            Document doc = builder.parse(new FileInputStream(file));
-            XPath xPath = XPathFactory.newInstance().newXPath();
+            Document doc = loadXML(file);
             String expression = "/DESADV/SG10";
-            Node node = (Node) xPath.compile(expression).evaluate(doc, XPathConstants.NODE);
             String str = getStringFromDocument(doc);
-            String goods = nodeToString(node);
+            String goods = loadXMLNode(doc, expression);
             assertNotNull(goods);
             dn.setAsset(goods);
             dn.addAdvice(str);
@@ -95,14 +119,6 @@ public final class NoteTest {
             System.out.println(nt.toString());
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
-        } catch (ParserConfigurationException e2) {
-            e2.printStackTrace();
-        } catch (SAXException e3) {
-            e3.printStackTrace();
-        } catch (IOException e4) {
-            e4.printStackTrace();
-        } catch (XPathExpressionException e5) {
-            e5.printStackTrace();
-        }
+        } 
     }
 }

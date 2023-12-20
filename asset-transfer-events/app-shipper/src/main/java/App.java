@@ -3,6 +3,32 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.xml.sax.SAXException;
+
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.ParserConfigurationException;
+
+import java.io.StringWriter;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -30,8 +56,7 @@ public final class App {
 	private final Contract contract;
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-
-	   //method to convert Document to String
+    //method to convert Document to String
     public String getStringFromDocument(final Document doc) {
         try {
             DOMSource domSource = new DOMSource(doc);
@@ -74,11 +99,11 @@ public final class App {
             e3.printStackTrace();
         } catch (IOException e4) {
             e4.printStackTrace();
-        } 
+        }
         return doc;
     }
 
-    private String loadXMLNode(Document doc, String xpath) {
+    private String loadXMLNode(final Document doc, final String xpath) {
         Node node = null;
         try {
             XPath xPath = XPathFactory.newInstance().newXPath();
@@ -117,6 +142,7 @@ public final class App {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
 			var firstBlockNumber = createAsset();
+			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("desadv.xml").getFile());
             Document doc = loadXML(file);
             String expression = "/DESADV/SG10";
@@ -128,7 +154,9 @@ public final class App {
 
 			// Replay events from the block containing the first transaction
 			replayChaincodeEvents(firstBlockNumber);
-		}
+		} catch (FileNotFoundException e1) {
+            e1.printStackTrace();
+        }
 	}
 
 	private CloseableIterator<ChaincodeEvent> startChaincodeEventListening() {

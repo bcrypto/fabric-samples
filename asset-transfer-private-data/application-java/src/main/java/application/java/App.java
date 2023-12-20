@@ -80,7 +80,7 @@ public class App {
 			var receiverRegistrationInfo = new RegistrationInfo("https://localhost:8054", receiverOrganization.getName() + "Admin", "Org2MSP", "org2.example.com", "org2.department1", "org2");
 
 			// Delete wallet if it exists from prior runs
-			/*FileUtils.deleteDirectory(new File("wallet"));
+			FileUtils.deleteDirectory(new File("wallet"));
 			// shipper
 			EnrollAdmin.enroll(shipperRegistrationInfo);
 			RegisterUser.register(shipperRegistrationInfo, shipperOrganization);
@@ -91,7 +91,7 @@ public class App {
 
 			// receiver
 			EnrollAdmin.enroll(receiverRegistrationInfo);
-			RegisterUser.register(receiverRegistrationInfo, receiverOrganization);*/
+			RegisterUser.register(receiverRegistrationInfo, receiverOrganization);
 
 			var shipperContract = getContract(shipperOrganization.getName(), shipperRegistrationInfo);
 			var gateway = connect(shipperOrganization.getName(), shipperRegistrationInfo);
@@ -218,10 +218,10 @@ public class App {
 	private static String registerWaybill(Contract shipperContract, Peer peer) throws Exception {
 			byte[] result;
 			System.out.println("Submit Transaction: Reserve waybill");
-			//result = shipperContract.submitTransaction("ReserveWaybill");
-		    var transaction = shipperContract.createTransaction("ReserveWaybill");
-			transaction.setEndorsingPeers(Arrays.asList(peer));
-			result = transaction.submit();
+			result = shipperContract.submitTransaction("ReserveWaybill");
+		    //var transaction = shipperContract.createTransaction("ReserveWaybill");
+			//transaction.setEndorsingPeers(Arrays.asList(peer));
+			//result = transaction.submit();
 			var id = new String(result);
 			System.out.println("Reserved waybill with id " + id);
 			return id;

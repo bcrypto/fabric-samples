@@ -77,11 +77,11 @@ public final class NoteTest {
             e3.printStackTrace();
         } catch (IOException e4) {
             e4.printStackTrace();
-        } 
+        }
         return doc;
     }
 
-    private String loadXMLNode(Document doc, String xpath) {
+    private String loadXMLNode(final Document doc, final String xpath) {
         Node node = null;
         try {
             XPath xPath = XPathFactory.newInstance().newXPath();
@@ -119,6 +119,6 @@ public final class NoteTest {
             System.out.println(nt.toString());
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
-        } 
+        }
     }
 }

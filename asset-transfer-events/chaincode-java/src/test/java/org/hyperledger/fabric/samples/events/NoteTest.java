@@ -91,7 +91,7 @@ public class NoteTest{
             assertNotNull(goods);
             dn.setAsset(goods);
             dn.addAdvice(str);
-            //System.out.println(dn.serialize("fields"));
+            System.out.println(dn.serialize("{}"));
         } catch(FileNotFoundException e1) {
             e1.printStackTrace(); 
         } catch(ParserConfigurationException e2) {

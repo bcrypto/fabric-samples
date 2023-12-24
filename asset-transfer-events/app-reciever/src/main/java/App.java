@@ -56,6 +56,7 @@ public final class App {
 	private final Contract contract;
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
     //method to convert Document to String
     public String getStringFromDocument(final Document doc) {
         try {
@@ -141,19 +142,19 @@ public final class App {
 	public void run() throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
-			var firstBlockNumber = createAsset();
+			//var firstBlockNumber = createAsset();
 			ClassLoader classLoader = getClass().getClassLoader();
-			File file = new File(classLoader.getResource("desadv.xml").getFile());
+			File file = new File(classLoader.getResource("recadv.xml").getFile());
             Document doc = loadXML(file);
             String expression = "/DESADV/SG10";
             String str = getStringFromDocument(doc);
             String goods = loadXMLNode(doc, expression);
-			updateAsset(goods);
-			addAdvice(str);
-			deleteAsset();
+			// updateAsset(goods);
+			// addAdvice(str);
+			// deleteAsset();
 
 			// Replay events from the block containing the first transaction
-			replayChaincodeEvents(firstBlockNumber);
+			replayChaincodeEvents(0);
 		} catch (FileNotFoundException e1) {
             e1.printStackTrace();
         }
@@ -183,7 +184,23 @@ public final class App {
 		return gson.toJson(parsedJson);
 	}
 
-	private long createAsset() throws EndorseException, SubmitException, CommitStatusException {
+	private Stirng catchAsset() throws EndorseException, SubmitException, CommitStatusException {
+		var request = network.newChaincodeEventsRequest(chaincodeName)
+				.startBlock(0)
+				.build();
+
+		try (var eventIter = request.getEvents()) {
+			while (eventIter.hasNext()) {
+				var event = eventIter.next();
+				var payload = prettyJson(event.getPayload());
+				System.out.println("\n<-- Chaincode event replayed: " + event.getEventName() + " - " + payload);
+
+				if (event.getEventName().equals("DeleteNote")) {
+					// Reached the last submitted transaction so break to close the iterator and stop listening for events
+					break;
+				}
+			}
+		}
 		System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
 
 		var commit = contract.newProposal("CreateNote")

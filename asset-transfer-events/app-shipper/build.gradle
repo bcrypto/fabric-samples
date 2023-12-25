@@ -24,3 +24,7 @@ application {
     // Define the main class for the application.
     mainClass = 'App'
 }
+
+run {
+   standardInput = System.in
+}

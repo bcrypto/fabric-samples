@@ -79,8 +79,8 @@ public class App {
 			var carrierRegistrationInfo = new RegistrationInfo("https://localhost:11054", carrierOrganization.getName() + "Admin", "OperatorMSP", "operator.by", "operator.department1", "operator");
 			var receiverRegistrationInfo = new RegistrationInfo("https://localhost:8054", receiverOrganization.getName() + "Admin", "Org2MSP", "org2.example.com", "org2.department1", "org2");
 
-			// Delete wallet if it exists from prior runs
-			/*FileUtils.deleteDirectory(new File("wallet"));
+			/*// Delete wallet if it exists from prior runs
+			FileUtils.deleteDirectory(new File("wallet"));
 			// shipper
 			EnrollAdmin.enroll(shipperRegistrationInfo);
 			RegisterUser.register(shipperRegistrationInfo, shipperOrganization);
@@ -106,11 +106,19 @@ public class App {
 			var waybillId2 = registerWaybill(shipperContract, peer);
 
 			// Init transfer
-			initTransfer(waybillId2, shipperOrganization.getGLN(), carrierOrganization.getGLN(), receiverOrganization.getGLN(), shipperContract);
+			var waybill = initTransfer(waybillId2, shipperOrganization.getGLN(), carrierOrganization.getGLN(), receiverOrganization.getGLN(), shipperContract);
 
-			// Get transfer by carrier
-			var waybills = getWaybillsByRange(carrierContract);
+			// Sign by carrier
+			waybill = agreeByCarrier(waybill, carrierContract);
 
+			// Sign by receiver
+			waybill = agreeByReceiver(waybill, receiverContract);
+
+			List<String> lines = Arrays.asList(waybill.getXmlData());
+			Path file = Paths.get("result.xml");
+			Files.write(file, lines, StandardCharsets.UTF_8);
+
+			System.out.println("Sample completed successfully");
 		}
 		catch (Exception e)
 		{
@@ -218,10 +226,10 @@ public class App {
 	private static String registerWaybill(Contract shipperContract, Peer peer) throws Exception {
 			byte[] result;
 			System.out.println("Submit Transaction: Reserve waybill");
-			//result = shipperContract.submitTransaction("ReserveWaybill");
-		    var transaction = shipperContract.createTransaction("ReserveWaybill");
-			transaction.setEndorsingPeers(Arrays.asList(peer));
-			result = transaction.submit();
+			result = shipperContract.submitTransaction("ReserveWaybill");
+		    //var transaction = shipperContract.createTransaction("ReserveWaybill");
+			//transaction.setEndorsingPeers(Arrays.asList(peer));
+			//result = transaction.submit();
 			var id = new String(result);
 			System.out.println("Reserved waybill with id " + id);
 			return id;
@@ -241,9 +249,9 @@ public class App {
 		return genson.deserialize(bytes, Organization.class);
 	}
 
-	private static void initTransfer(String id, String shipper, String carrier, String receiver, Contract shipperContract) throws IOException, ContractException, InterruptedException, TimeoutException {
+	private static Waybill initTransfer(String id, String shipper, String carrier, String receiver, Contract shipperContract) throws IOException, ContractException, InterruptedException, TimeoutException {
 		var xmlData = new String(App.class.getClassLoader().getResourceAsStream("waybill.xml").readAllBytes(), StandardCharsets.UTF_8);
-		signByShipper(xmlData);
+		xmlData = signByShipper(xmlData);
 		var waybill = new Waybill(id, shipper, carrier, receiver, xmlData);
 		//waybill = genson.deserialize("{\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}; {\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}", Waybill.class);
 		var waybillJson = genson.serialize(waybill);
@@ -254,15 +262,17 @@ public class App {
 		transientMap.put(TransferPropertiesKey, waybillBytes);
 		transaction.setTransient(transientMap);
 		System.out.println("Submit Transaction: InitTransfer");
-		transaction.submit();
+		var result = transaction.submit();
 		System.out.println("InitTransfer: successful");
+
+		return genson.deserialize(result, Waybill.class);
 	}
 
-	private static List<Waybill> getWaybillsByRange(Contract contract) throws ContractException {
+	private static Waybill[] getWaybillsByRange(Contract contract) throws ContractException {
 		byte[] result;
 		System.out.println("Evaluate Transaction: GetWaybillsByRange");
-		result = contract.evaluateTransaction("GetWaybillsByRange", "", "");
-		var waybills = genson.deserialize(result, new GenericType<List<Waybill>>(){});
+		result = contract.evaluateTransaction("GetWaybillsByRange", "shipperCCC-shipperGLN-1", "shipperCCC-shipperGLN-4");
+		var waybills = genson.deserialize(result, Waybill[].class);
 		for (var waybill: waybills) {
 			System.out.println("Found waybill with id =" + waybill.getId());
 		}
@@ -270,26 +280,47 @@ public class App {
 		return waybills;
 	}
 
-	private static void agreeByCarrier(String id, String shipper, String carrier, String receiver, Contract shipperContract) throws IOException, ContractException, InterruptedException, TimeoutException {
+	private static Waybill agreeByReceiver(Waybill waybill1, Contract receiverContract) throws IOException, ContractException, InterruptedException, TimeoutException {
 		var xmlData = new String(App.class.getClassLoader().getResourceAsStream("waybill.xml").readAllBytes(), StandardCharsets.UTF_8);
-		signByShipper(xmlData);
-		var waybill = new Waybill(id, shipper, carrier, receiver, xmlData);
+		xmlData = signByShipper(xmlData);
+		var waybill = new Waybill(waybill1.getId(), waybill1.getShipperGLN(), waybill1.getCarrierGLN(), waybill1.getReceiverGLN(), xmlData);
 		//waybill = genson.deserialize("{\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}; {\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}", Waybill.class);
 		var waybillJson = genson.serialize(waybill);
 		var waybillBytes = waybillJson.getBytes(StandardCharsets.UTF_8);
-		System.out.println("Create Transaction: InitTransfer");
-		var transaction = shipperContract.createTransaction("InitTransfer");
+		System.out.println("Create Transaction: AgreeByReceiver");
+		var transaction = receiverContract.createTransaction("AgreeByReceiver");
 		var transientMap = new HashMap<String, byte[]>();
 		transientMap.put(TransferPropertiesKey, waybillBytes);
 		transaction.setTransient(transientMap);
-		System.out.println("Submit Transaction: InitTransfer");
-		transaction.submit();
-		System.out.println("InitTransfer: successful");
+		System.out.println("Submit Transaction: AgreeByReceiver");
+		var result = transaction.submit();
+		System.out.println("AgreeByReceiver: successful");
+
+		return genson.deserialize(result, Waybill.class);
+	}
+
+	private static Waybill agreeByCarrier(Waybill waybill1, Contract carrierContract) throws IOException, ContractException, InterruptedException, TimeoutException {
+		var xmlData = new String(App.class.getClassLoader().getResourceAsStream("waybill.xml").readAllBytes(), StandardCharsets.UTF_8);
+		signByShipper(xmlData);
+		var waybill = new Waybill(waybill1.getId(), waybill1.getShipperGLN(), waybill1.getCarrierGLN(), waybill1.getReceiverGLN(), xmlData);
+		//waybill = genson.deserialize("{\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}; {\"carrierGLN\":\"carrierGLN\",\"id\":\"shipperCCC-shipperGLN-10\",\"receiverGLN\":\"receiverGLN\",\"shipperGLN\":\"shipperGLN\",\"xmlData\":\"<waybill>\\r\\n    <to>Receiver</to>\\r\\n    <from>Shipper</from>\\r\\n    <id>1</id>\\r\\n</waybill>\"}", Waybill.class);
+		var waybillJson = genson.serialize(waybill);
+		var waybillBytes = waybillJson.getBytes(StandardCharsets.UTF_8);
+		System.out.println("Create Transaction: AgreeByCarrier");
+		var transaction = carrierContract.createTransaction("AgreeByCarrier");
+		var transientMap = new HashMap<String, byte[]>();
+		transientMap.put(TransferPropertiesKey, waybillBytes);
+		transaction.setTransient(transientMap);
+		System.out.println("Submit Transaction: AgreeByCarrier");
+		var result = transaction.submit();
+		System.out.println("AgreeByCarrier: successful");
+
+		return genson.deserialize(result, Waybill.class);
 	}
 
 	private static String signByShipper(String xmlData) {
 		// todo: sign xml
 
-		return xmlData;
+		return "shipper";
 	}
 }

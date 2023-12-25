@@ -45,6 +45,7 @@ public final class CargoTransfer implements ContractInterface {
     {
         ChaincodeStub stub = ctx.getStub();
         ClientIdentity user = getUser(stub);
+        verifyClientOrgMatchesPeerOrg(ctx);
         verifyUserRole(user, Role.SHIPPER);
         String ccc = getCCC(user);
         String gln = getGLN(user);
@@ -54,7 +55,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill InitTransfer(final Context ctx) {
+    public String InitTransfer(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -120,12 +121,12 @@ public final class CargoTransfer implements ContractInterface {
         System.out.printf("Put: collection %s, ID %s\n", ShipperCarrierCollectionName, serializedWaybill);
         stub.putPrivateData(ShipperCarrierCollectionName, waybill.getId(), serializedWaybill);
 
-        return waybill;
+        return serializedWaybill;
 
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill AgreeByCarrier(final Context ctx) {
+    public String AgreeByCarrier(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -161,14 +162,15 @@ public final class CargoTransfer implements ContractInterface {
         verifyClientOrgMatchesPeerOrg(ctx);
 
         // Save waybill to org collection
+        var serializedWaybill = genson.serialize(waybill);
         System.out.printf("Put AssetPrivateDetails: collection %s, ID %s\n", CarrierReceiverCollectionName, waybill.getId());
-        stub.putPrivateData(CarrierReceiverCollectionName, waybill.getId(), genson.serialize(waybill));
+        stub.putPrivateData(CarrierReceiverCollectionName, waybill.getId(), serializedWaybill);
 
-        return waybill;
+        return serializedWaybill;
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public Waybill AgreeByReceiver(final Context ctx) {
+    public String AgreeByReceiver(final Context ctx) {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -201,38 +203,17 @@ public final class CargoTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
         }
 
-        verifyClientOrgMatchesPeerOrg(ctx);
+        //verifyClientOrgMatchesPeerOrg(ctx);
 
         // Save waybill to org collection
         System.out.printf("Put AssetPrivateDetails: collection %s, ID %s\n", CarrierReceiverCollectionName, waybill.getId());
         // todo: export
+        var serializedWaybill = genson.serialize(waybill);
         stub.delPrivateData(CarrierReceiverCollectionName, waybill.getId());
         stub.delPrivateData(ShipperCarrierCollectionName, waybill.getId());
 
-        return waybill;
+        return serializedWaybill;
     }
-
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public Waybill[] GetWaybillsByRange(final Context ctx, final String startKey, final String endKey) throws Exception {
-        ChaincodeStub stub = ctx.getStub();
-        System.out.printf("GetWaybillByRange: start %s, end %s\n", startKey, endKey);
-
-        List<Waybill> queryResults = new ArrayList<>();
-        // retrieve waybill with keys between startKey(inclusive) and endKey(exclusive) in lexical order.
-        try (QueryResultsIterator<KeyValue> results = stub.getPrivateDataByRange(getCollectionName(ctx), startKey, endKey)) {
-            for (KeyValue result : results) {
-                if (result.getStringValue() == null || result.getStringValue().length() == 0) {
-                    System.err.printf("Invalid Waybill json: %s\n", result.getStringValue());
-                    continue;
-                }
-                Waybill waybill = genson.deserialize(result.getStringValue(), Waybill.class);
-                queryResults.add(waybill);
-                System.out.println("QueryResult: " + waybill.toString());
-            }
-        }
-        return queryResults.toArray(new Waybill[0]);
-    }
-
 
     private static boolean verifySignature(String xmlData) {
         //
@@ -240,15 +221,14 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     private void verifyClientOrgMatchesPeerOrg(final Context ctx) {
-        return;
-       /* String clientMSPID = ctx.getClientIdentity().getMSPID();
+        String clientMSPID = ctx.getClientIdentity().getMSPID();
         String peerMSPID = ctx.getStub().getMspId();
 
         if (!peerMSPID.equals(clientMSPID)) {
             String errorMessage = String.format("Client from org %s is not authorized to read or write private data from an org %s peer", clientMSPID, peerMSPID);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, Errors.INVALID_ACCESS.toString());
-        }*/
+        }
     }
 
     private String getCollectionName(final Context ctx) {

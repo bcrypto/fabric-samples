@@ -29,6 +29,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -42,19 +43,22 @@ import org.hyperledger.fabric.client.EndorseException;
 import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.Network;
 import org.hyperledger.fabric.client.SubmitException;
+import org.hyperledger.fabric.client.GatewayException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 public final class App {
 	private static final String channelName = "mychannel";
 	private static final String chaincodeName = "events";
+	static final String PRIVATE_PROPS_KEY = "asset_properties";
 
 	private final Network network;
 	private final Contract contract;
-	private final String assetId = "asset" + Instant.now().toEpochMilli();
+	private String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 
     //method to convert Document to String
@@ -75,19 +79,6 @@ public final class App {
         }
     }
 
-    private String nodeToString(final Node node) {
-        StringWriter sw = new StringWriter();
-        try {
-            Transformer t = TransformerFactory.newInstance().newTransformer();
-            t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-            t.setOutputProperty(OutputKeys.INDENT, "no");
-            t.transform(new DOMSource(node), new StreamResult(sw));
-        } catch (TransformerException te) {
-            System.out.println("nodeToString Transformer Exception");
-        }
-        return sw.toString();
-    }
-
     private Document loadXML(final File file) throws FileNotFoundException {
         Document doc = null;
         try {
@@ -102,18 +93,6 @@ public final class App {
             e4.printStackTrace();
         }
         return doc;
-    }
-
-    private String loadXMLNode(final Document doc, final String xpath) {
-        Node node = null;
-        try {
-            XPath xPath = XPathFactory.newInstance().newXPath();
-            String expression = "/DESADV/SG10";
-            node = (Node) xPath.compile(expression).evaluate(doc, XPathConstants.NODE);
-        } catch (XPathExpressionException e5) {
-            e5.printStackTrace();
-        }
-        return nodeToString(node);
     }
 
 	public static void main(final String[] args) throws Exception {
@@ -142,19 +121,35 @@ public final class App {
 	public void run() throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
-			//var firstBlockNumber = createAsset();
+			//prepare resources
 			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("recadv.xml").getFile());
             Document doc = loadXML(file);
-            String expression = "/DESADV/SG10";
             String str = getStringFromDocument(doc);
-            String goods = loadXMLNode(doc, expression);
-			// updateAsset(goods);
-			// addAdvice(str);
-			// deleteAsset();
-
-			// Replay events from the block containing the first transaction
-			replayChaincodeEvents(0);
+			String items;
+			String prompt = "1. Exit\n2.Scan events\n3.Show channel history";
+			Scanner in = new Scanner(System.in);
+			System.out.println(prompt);
+			int action = in.nextInt();
+			while (action != 1) {
+				switch(action) {
+					case 2:
+						assetId = scanEvents(eventSession);
+						System.out.println("Target Note " + assetId);
+						items = getItems();
+						System.out.println("Target Items: " + items);
+						addAdvice(str);
+						break;
+					case 3:
+						// Replay events from the block containing the first transaction
+						replayChaincodeEvents(0);
+						break;
+					default:
+						break;
+				}
+				System.out.println(prompt);
+				action = in.nextInt();
+			}
 		} catch (FileNotFoundException e1) {
             e1.printStackTrace();
         }
@@ -184,39 +179,17 @@ public final class App {
 		return gson.toJson(parsedJson);
 	}
 
-	private Stirng catchAsset() throws EndorseException, SubmitException, CommitStatusException {
-		var request = network.newChaincodeEventsRequest(chaincodeName)
-				.startBlock(0)
-				.build();
-
-		try (var eventIter = request.getEvents()) {
-			while (eventIter.hasNext()) {
-				var event = eventIter.next();
-				var payload = prettyJson(event.getPayload());
-				System.out.println("\n<-- Chaincode event replayed: " + event.getEventName() + " - " + payload);
-
-				if (event.getEventName().equals("DeleteNote")) {
-					// Reached the last submitted transaction so break to close the iterator and stop listening for events
-					break;
-				}
-			}
+	private String getItems() throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		byte[] result = null;
+		System.out.println("\n--> Evaluate transaction: ReadItems, " + assetId);
+		try {
+			result = contract.evaluateTransaction("ReadItems", assetId);
+			System.out.println("\n*** ReadItems evaluated successfully");
+		} catch (GatewayException e1) {
+			System.out.println("\n*** ReadItems wasn't evaluated");
+			e1.printStackTrace();
 		}
-		System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
-
-		var commit = contract.newProposal("CreateNote")
-				.addArguments(assetId, "10", "100")
-				.build()
-				.endorse()
-				.submitAsync();
-
-		var status = commit.getStatus();
-		if (!status.isSuccessful()) {
-			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
-		}
-
-		System.out.println("\n*** CreateAsset committed successfully");
-
-		return status.getBlockNumber();
+		return new String(result, UTF_8);
 	}
 
 	private void updateAsset(String asset) throws EndorseException, SubmitException, CommitStatusException, CommitException {
@@ -230,18 +203,22 @@ public final class App {
 	private void addAdvice(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
-		contract.submitTransaction("AddAdvice", assetId, advice);
+		//contract.submitTransaction("AddAdvice", assetId, advice);
+		var commit = contract.newProposal("AddAdvice")
+				.addArguments(assetId, "3")
+				.putTransient(PRIVATE_PROPS_KEY, advice)
+				.build()
+				.endorse()
+				.submitAsync();
+
+		var status = commit.getStatus();
+		if (!status.isSuccessful()) {
+			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
+		}
 
 		System.out.println("\n*** AddAdvice committed successfully");
 	}
 
-	private void deleteAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: DeleteNote, " + assetId);
-
-		contract.submitTransaction("DeleteNote", assetId);
-
-		System.out.println("\n*** DeleteNote committed successfully");
-	}
 
 	private void replayChaincodeEvents(final long startBlock) {
 		System.out.println("\n*** Start chaincode event replay");
@@ -256,11 +233,30 @@ public final class App {
 				var payload = prettyJson(event.getPayload());
 				System.out.println("\n<-- Chaincode event replayed: " + event.getEventName() + " - " + payload);
 
-				if (event.getEventName().equals("DeleteNote")) {
-					// Reached the last submitted transaction so break to close the iterator and stop listening for events
-					break;
-				}
+				// if (event.getEventName().equals("DeleteNote")) {
+				// 	// Reached the last submitted transaction so break to close the iterator and stop listening for events
+				// 	break;
+				// }
 			}
 		}
+	}
+
+	private String scanEvents(final CloseableIterator<ChaincodeEvent> eventIter) {
+		System.out.println("\n*** Start chaincode event scanning");
+		while (eventIter.hasNext()) {
+			var event = eventIter.next();
+			var payload = prettyJson(event.getPayload());
+			System.out.println("\n<-- Chaincode event accepted: " + event.getEventName() + " - " + payload);
+			var status = JsonParser.parseString(payload).getAsJsonObject();
+
+			if (event.getEventName().equals("AddAdvice")) {
+				if(status.get("Status").getAsString() == "2") {
+					System.out.println("Note is awaiting for response " + status.get("ID").getAsString());
+				}
+				// Reached the last submitted transaction so break to close the iterator and stop listening for events
+				return status.get("ID").getAsString();
+			}
+		}
+		return null;
 	}
 }

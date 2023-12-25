@@ -29,6 +29,7 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -42,15 +43,18 @@ import org.hyperledger.fabric.client.EndorseException;
 import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.Network;
 import org.hyperledger.fabric.client.SubmitException;
+import org.hyperledger.fabric.client.GatewayException;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 public final class App {
 	private static final String channelName = "mychannel";
 	private static final String chaincodeName = "events";
+	static final String PRIVATE_PROPS_KEY = "asset_properties";
 
 	private final Network network;
 	private final Contract contract;
@@ -141,16 +145,39 @@ public final class App {
 	public void run() throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
-			var firstBlockNumber = createAsset();
+			// Prepare resources
 			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("desadv.xml").getFile());
             Document doc = loadXML(file);
             String expression = "/DESADV/SG10";
             String str = getStringFromDocument(doc);
             String goods = loadXMLNode(doc, expression);
-			updateAsset(goods);
+			
+			System.out.println("Press Enter to create Note");
+			Scanner in = new Scanner(System.in);
+			String name = in.nextLine();
+ 
+			var firstBlockNumber = createAsset();
+
+			System.out.println("Press Enter to load DESADV message");
+			name = in.nextLine();
+
+ 			updateAsset(goods);
 			addAdvice(str);
+
+			System.out.println("Press Enter to export Note");
+			name = in.nextLine();
+
+			String delnote = getAsset();
+			System.out.println(delnote);
+
+			System.out.println("Press Enter to delete Note");
+			name = in.nextLine();
+
 			deleteAsset();
+
+			System.out.println("Press Enter to see events history");
+			name = in.nextLine();
 
 			// Replay events from the block containing the first transaction
 			replayChaincodeEvents(firstBlockNumber);
@@ -205,7 +232,23 @@ public final class App {
 	private void updateAsset(String asset) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		System.out.println("\n--> Submit transaction: UpdateItems for " + assetId);
 
-		contract.submitTransaction("UpdateItems", assetId, asset);
+		//contract.submitTransaction("UpdateItems", assetId, asset);
+		//var transaction = contract.createTransaction("UpdateItems");
+		//var transientMap = new HashMap<String, byte[]>();
+		//transientMap.put(PRIVATE_PROPS_KEY, asset.getBytes(UTF_8));
+		//transaction.setTransient(transientMap);
+		//transaction.submit();
+		var commit = contract.newProposal("UpdateItems")
+				.addArguments(assetId, "1")
+				.putTransient(PRIVATE_PROPS_KEY, asset)
+				.build()
+				.endorse()
+				.submitAsync();
+
+		var status = commit.getStatus();
+		if (!status.isSuccessful()) {
+			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
+		}
 
 		System.out.println("\n*** UpdateItems committed successfully");
 	}
@@ -213,9 +256,52 @@ public final class App {
 	private void addAdvice(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
-		contract.submitTransaction("AddAdvice", assetId, advice);
+		//contract.submitTransaction("AddAdvice", assetId, advice);
+		//var transaction = contract.createTransaction("AddAdvice");
+		//var transientMap = new HashMap<String, byte[]>();
+		//transientMap.put(PRIVATE_PROPS_KEY, advice.getBytes(UTF_8));
+		//transaction.setTransient(transientMap);
+		//transaction.submit();
+		var commit = contract.newProposal("AddAdvice")
+				.addArguments(assetId, "2")
+				.putTransient(PRIVATE_PROPS_KEY, advice)
+				.build()
+				.endorse()
+				.submitAsync();
+
+		var status = commit.getStatus();
+		if (!status.isSuccessful()) {
+			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
+		}
 
 		System.out.println("\n*** AddAdvice committed successfully");
+	}
+
+	private String getAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		byte[] result = null;
+		System.out.println("\n--> Evaluate transaction: ExportNote, " + assetId);
+		try {
+			result = contract.evaluateTransaction("ExportNote", assetId);
+			System.out.println("\n*** ExportNote evaluated successfully");
+		} catch (GatewayException e1) {
+			System.out.println("\n*** ExportNote wasn't evaluated");
+			e1.printStackTrace();
+		}
+		
+		return new String(result, UTF_8);
+	}
+
+	private String getItems() throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		byte[] result = null;
+		System.out.println("\n--> Evaluate transaction: ReadItems, " + assetId);
+		try {
+			result = contract.evaluateTransaction("ReadItems", assetId);
+			System.out.println("\n*** ReadItems evaluated successfully");
+		} catch (GatewayException e1) {
+			System.out.println("\n*** ReadItems wasn't evaluated");
+			e1.printStackTrace();
+		}
+		return new String(result, UTF_8);
 	}
 
 	private void deleteAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {

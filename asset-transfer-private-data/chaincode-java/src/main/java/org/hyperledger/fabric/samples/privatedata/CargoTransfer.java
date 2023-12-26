@@ -7,12 +7,16 @@ import org.hyperledger.fabric.contract.ContractInterface;
 import org.hyperledger.fabric.contract.annotation.*;
 import org.hyperledger.fabric.shim.ChaincodeException;
 import org.hyperledger.fabric.shim.ChaincodeStub;
-import org.hyperledger.fabric.shim.ledger.KeyValue;
-import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
-import javax.swing.plaf.synth.SynthTextAreaUI;
-import java.util.ArrayList;
-import java.util.List;
+import javax.xml.crypto.dsig.XMLSignature;
+import javax.xml.crypto.dsig.XMLSignatureFactory;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.ByteArrayInputStream;
 import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -37,6 +41,9 @@ public final class CargoTransfer implements ContractInterface {
     private final static String WaybillIdCollectionName= "WAYBILL_ID_COLLECTION";
     private final static String ShipperCarrierCollectionName = "SHIPPER_CARRIER_COLLECTION";
     private final static String CarrierReceiverCollectionName = "CARRIER_RECEIVER_COLLECTION";
+    private final static String ToSignByShipperId = "#toSignByShipper";
+    private final static String ToSignByCarrierId = "#toSignByCarrier";
+    private final static String ToSignByReceiverId = "#toSignByReceiver";
 
     private final Genson genson = new Genson();
 
@@ -55,7 +62,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String InitTransfer(final Context ctx) {
+    public String InitTransfer(final Context ctx) throws Exception {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -103,7 +110,7 @@ public final class CargoTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(waybill.getXmlData());
+        boolean isSignatureValid = verifyShipperSignature(waybill.getXmlData());
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
@@ -126,7 +133,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String AgreeByCarrier(final Context ctx) {
+    public String AgreeByCarrier(final Context ctx) throws Exception {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -153,7 +160,7 @@ public final class CargoTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(transientWaybillJSON);
+        boolean isSignatureValid = verifyCarrierSignature(waybill.getXmlData());
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
@@ -170,7 +177,7 @@ public final class CargoTransfer implements ContractInterface {
     }
 
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public String AgreeByReceiver(final Context ctx) {
+    public String AgreeByReceiver(final Context ctx) throws Exception {
         ChaincodeStub stub = ctx.getStub();
         Map<String, byte[]> transientMap = ctx.getStub().getTransient();
         if (!transientMap.containsKey(TransferPropertiesKey)) {
@@ -197,7 +204,7 @@ public final class CargoTransfer implements ContractInterface {
             throw new ChaincodeException(errorMessage, Errors.INCOMPLETE_INPUT.toString());
         }
 
-        boolean isSignatureValid = verifySignature(transientWaybillJSON);
+        boolean isSignatureValid = verifyReceiverSignature(waybill.getXmlData());
         if (!isSignatureValid) {
             errorMessage = String.format("Signature is invalid");
             throw new ChaincodeException(errorMessage, Errors.INVALID_SIGNATURE.toString());
@@ -215,9 +222,48 @@ public final class CargoTransfer implements ContractInterface {
         return serializedWaybill;
     }
 
-    private static boolean verifySignature(String xmlData) {
-        //
-        return true;
+    private static boolean verifyShipperSignature(String xmlSignature) throws Exception {
+        return verifySignature(xmlSignature, ToSignByShipperId);
+    }
+
+    private static boolean verifyCarrierSignature(String xmlSignature) throws Exception {
+        return verifySignature(xmlSignature, ToSignByCarrierId);
+    }
+
+    private static boolean verifyReceiverSignature(String xmlSignature) throws Exception {
+        return verifySignature(xmlSignature, ToSignByReceiverId);
+    }
+
+    private static boolean verifySignature(String xmlSignature, String id) throws Exception {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+        Document doc = dbf.newDocumentBuilder().parse(new ByteArrayInputStream(xmlSignature.getBytes()));
+        Input.markIdAttribute(doc);
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+
+        NodeList nl = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (nl.getLength() == 0) {
+            throw new Exception("Cannot find Signature element");
+        }
+        var node = getNodeWithReference(nl, id);
+
+        DOMValidateContext valContext = new DOMValidateContext(new X509KeySelector(), node);
+
+        XMLSignature signature = fac.unmarshalXMLSignature(valContext);
+
+        return signature.validate(valContext);
+    }
+
+    private static Node getNodeWithReference(NodeList nodeList, String id) throws Exception {
+        for (var i = 0; i < nodeList.getLength(); i++) {
+            var node = nodeList.item(i);
+            var reference = (Element) ((Element) node).getElementsByTagName("Reference").item(0);
+
+            if (reference.getAttribute("URI").equals(id)) {
+                return node;
+            }
+        }
+        throw new Exception("Can't find signature with id= " + id);
     }
 
     private void verifyClientOrgMatchesPeerOrg(final Context ctx) {
@@ -291,10 +337,4 @@ public final class CargoTransfer implements ContractInterface {
 
         return stringId;
     }
-
-    private boolean verifyShipperSignature(String xmlData) {
-        //todo verifySignature
-        return true;
-    }
-
 }

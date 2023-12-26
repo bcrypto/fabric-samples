@@ -5,6 +5,7 @@
  */
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -169,7 +170,13 @@ public final class App {
 			name = in.nextLine();
 
 			String delnote = getAsset();
-			System.out.println(delnote);
+			try{
+				FileOutputStream outputStream = new FileOutputStream("./result.xml");
+				outputStream.write(delnote.getBytes());
+				outputStream.close();
+			} catch (IOException e1) {
+				e1.printStackTrace();
+			}
 
 			System.out.println("Press Enter to delete Note");
 			name = in.nextLine();
@@ -187,14 +194,14 @@ public final class App {
 	}
 
 	private CloseableIterator<ChaincodeEvent> startChaincodeEventListening() {
-		System.out.println("\n*** Start chaincode event listening");
+		//System.out.println("\n*** Start chaincode event listening");
 
 		var eventIter = network.getChaincodeEvents(chaincodeName);
 
 		CompletableFuture.runAsync(() -> {
 			eventIter.forEachRemaining(event -> {
 				var payload = prettyJson(event.getPayload());
-				System.out.println("\n<-- Chaincode event received: " + event.getEventName() + " - " + payload);
+				//System.out.println("\n<-- Chaincode event received: " + event.getEventName() + " - " + payload);
 			});
 		});
 
@@ -224,7 +231,7 @@ public final class App {
 			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
 		}
 
-		System.out.println("\n*** CreateAsset committed successfully");
+		System.out.println("\n*** CreateNote committed successfully");
 
 		return status.getBlockNumber();
 	}

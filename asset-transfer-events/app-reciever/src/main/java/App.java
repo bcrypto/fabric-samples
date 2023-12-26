@@ -127,7 +127,8 @@ public final class App {
             Document doc = loadXML(file);
             String str = getStringFromDocument(doc);
 			String items;
-			String prompt = "1. Exit\n2.Scan events\n3.Show channel history";
+			String input;
+			String prompt = "1. Exit\n2. Scan events\n3. Show channel history";
 			Scanner in = new Scanner(System.in);
 			System.out.println(prompt);
 			int action = in.nextInt();
@@ -138,6 +139,9 @@ public final class App {
 						System.out.println("Target Note " + assetId);
 						items = getItems();
 						System.out.println("Target Items: " + items);
+						System.out.println("Press Enter to send RECADV message");
+						input = in.nextLine();
+						input = in.nextLine();
 						addAdvice(str);
 						break;
 					case 3:
@@ -156,14 +160,14 @@ public final class App {
 	}
 
 	private CloseableIterator<ChaincodeEvent> startChaincodeEventListening() {
-		System.out.println("\n*** Start chaincode event listening");
+		//System.out.println("\n*** Start chaincode event listening");
 
 		var eventIter = network.getChaincodeEvents(chaincodeName);
 
 		CompletableFuture.runAsync(() -> {
 			eventIter.forEachRemaining(event -> {
 				var payload = prettyJson(event.getPayload());
-				System.out.println("\n<-- Chaincode event received: " + event.getEventName() + " - " + payload);
+				//System.out.println("\n<-- Chaincode event received: " + event.getEventName() + " - " + payload);
 			});
 		});
 
@@ -187,7 +191,8 @@ public final class App {
 			System.out.println("\n*** ReadItems evaluated successfully");
 		} catch (GatewayException e1) {
 			System.out.println("\n*** ReadItems wasn't evaluated");
-			e1.printStackTrace();
+			//e1.printStackTrace();
+			return null;
 		}
 		return new String(result, UTF_8);
 	}

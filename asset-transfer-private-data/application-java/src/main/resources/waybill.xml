@@ -1,5 +1,14 @@
-<waybill>
-    <to>Receiver</to>
-    <from>Shipper</from>
-    <id>1</id>
-</waybill>
+<?xml version="1.0"?>
+<x:waybill xmlns:x="urn:waybill">
+<part id="toSignByShipper">
+    <value>shipperValue</value>
+</part>
+
+<part id="toSignByCarrier">
+    <value>carrierValue</value>
+</part>
+
+<part id="toSignByReceiver">
+    <value>receiverValue</value>
+</part>
+</x:waybill>

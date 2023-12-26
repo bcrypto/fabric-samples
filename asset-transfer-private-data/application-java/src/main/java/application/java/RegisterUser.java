@@ -10,7 +10,6 @@ import java.util.Properties;
 import org.hyperledger.fabric.gateway.Wallet;
 import org.hyperledger.fabric.gateway.Wallets;
 import org.hyperledger.fabric.gateway.Identities;
-import org.hyperledger.fabric.gateway.Identity;
 import org.hyperledger.fabric.gateway.X509Identity;
 import org.hyperledger.fabric.sdk.Enrollment;
 import org.hyperledger.fabric.sdk.User;
@@ -21,8 +20,6 @@ import org.hyperledger.fabric_ca.sdk.HFCAClient;
 import org.hyperledger.fabric_ca.sdk.RegistrationRequest;
 
 public class RegisterUser {
-
-	private final static String RoleAttributeName = "ROLE";
 
 	public static void register(RegistrationInfo registrationInfo, Organization organization) throws Exception {
 		var userName = organization.getName();
@@ -62,7 +59,7 @@ public class RegisterUser {
 		String enrollmentSecret = caClient.register(registrationRequest, admin);
 		Enrollment enrollment = caClient.enroll(userName, enrollmentSecret);
 
-		Identity user = Identities.newX509Identity(registrationInfo.getMspId(), enrollment);
+		X509Identity user = Identities.newX509Identity(registrationInfo.getMspId(), enrollment);
 		wallet.put(userName, user);
 		System.out.println("Successfully enrolled user \"" + userName +"\" and imported it into the wallet");
 	}

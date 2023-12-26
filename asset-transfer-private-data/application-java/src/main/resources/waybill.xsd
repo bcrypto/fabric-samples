@@ -1,0 +1,22 @@
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+            targetNamespace="urn:waybill"
+            xmlns:wb="urn:waybill">
+
+    <xsd:element name="waybill" type="wb:WaybillForm"/>
+
+    <xsd:complexType name="WaybillForm">
+        <xsd:sequence>
+            <xsd:element name="part"
+                         type="wb:PartForm"
+                         minOccurs="0"
+                         maxOccurs="unbounded"/>
+        </xsd:sequence>
+    </xsd:complexType>
+
+    <xsd:complexType name="PartForm">
+        <xsd:sequence>
+            <xsd:element name="value"   type="xsd:string"/>
+        </xsd:sequence>
+        <xsd:attribute name="id"   type="xsd:string"/>
+    </xsd:complexType>
+</xsd:schema>

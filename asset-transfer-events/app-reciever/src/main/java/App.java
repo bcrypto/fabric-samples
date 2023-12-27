@@ -10,6 +10,8 @@ import java.io.IOException;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -17,6 +19,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.ParserConfigurationException;
 
 import java.io.StringWriter;
+import java.io.StringReader;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.TransformerFactory;
@@ -95,6 +98,41 @@ public final class App {
         return doc;
     }
 
+	public static Document loadXMLFromString(final String xml) {
+        Document doc = null;
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            InputSource is = new InputSource(new StringReader(xml));
+            doc = builder.parse(is);
+        } catch (ParserConfigurationException e2) {
+            e2.printStackTrace();
+        } catch (SAXException e3) {
+            e3.printStackTrace();
+        } catch (IOException e4) {
+            e4.printStackTrace();
+        }
+        return doc;
+    }
+
+    private void printItems(final String items) {
+        try {
+            Document doc = loadXMLFromString(items);
+            XPath xpath = XPathFactory.newInstance().newXPath();
+            NodeList nodes = (NodeList) xpath.compile("SG10/SG17").evaluate(doc, XPathConstants.NODESET);
+            System.out.printf("Quantity \tGTIN       \tNAME\n");
+            for (int i = 0; i < nodes.getLength(); i++) {
+                Node node = nodes.item(i);
+                String gtin  = xpath.compile("LIN/C212/E7140").evaluate(node).trim();
+                String qty  = xpath.compile("QTY/C186[child::E6411/text()!='OF']/E6060").evaluate(node).trim();
+                String name  = xpath.compile("IMD/C273/E7008").evaluate(node).trim();
+                System.out.printf("\t%s \t%s \t%s\n", qty, gtin, name);
+            }
+        } catch (XPathExpressionException e5) {
+            e5.printStackTrace();
+        }
+    }
+
 	public static void main(final String[] args) throws Exception {
 		var grpcChannel = Connections.newGrpcConnection();
 		var builder = Gateway.newInstance()
@@ -138,7 +176,7 @@ public final class App {
 						assetId = scanEvents(eventSession);
 						System.out.println("Target Note " + assetId);
 						items = getItems();
-						System.out.println("Target Items: " + items);
+						printItems(items);
 						System.out.println("Press Enter to send RECADV message");
 						input = in.nextLine();
 						input = in.nextLine();

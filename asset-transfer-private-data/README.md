@@ -49,7 +49,7 @@ Like other samples, the Fabric test network is used to deploy and run this sampl
 2. Deploy one of the smart contract implementations (from the `test-network` folder).
    ```
    # To deploy the Java chaincode implementation
-   ./network.sh deployCC -ccn private -ccp ../asset-transfer-private-data/chaincode-java  -ccl java -ccep "OR('Org1MSP.peer','Org2MSP.peer')"  -cccg '../asset-transfer-private-data/chaincode-java/collections_config.json' -ccep "OR('Org1MSP.peer','Org2MSP.peer')"
+   ./network.sh deployCC -ccn private -ccp ../asset-transfer-private-data/chaincode-java  -ccl java -ccep "OR('Org1MSP.peer','Org2MSP.peer')"  -cccg '../asset-transfer-private-data/chaincode-java/collections_config.json' -ccep "OR('Org1MSP.peer','Org2MSP.peer','OperatorMSP.peer')"
 
    # To deploy the go chaincode implementation
    ./network.sh deployCC -ccn private -ccp ../asset-transfer-private-data/chaincode-go  -ccl go -ccep "OR('Org1MSP.peer','Org2MSP.peer')"  -cccg '../asset-transfer-private-data/chaincode-go/collections_config.json' -ccep "OR('Org1MSP.peer','Org2MSP.peer')"

@@ -27,7 +27,7 @@ dependencies {
     // This dependency is used by the application.
     implementation 'com.google.guava:guava:29.0-jre'
     implementation 'org.hyperledger.fabric:fabric-gateway-java:2.1.1'
-    implementation 'by.bsu:bee2j:1.0:'
+    //implementation 'by.bsu:bee2j:1.0:'
     implementation 'com.owlike:genson:1.6'
 }
 

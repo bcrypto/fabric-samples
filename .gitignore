@@ -37,3 +37,5 @@ install-fabric.sh
 # bpki
 asset-transfer-basic/application-java/src/main/resources/out/
 asset-transfer-basic/chaincode-java/src/main/resources/out/
+result.xml
+*.id

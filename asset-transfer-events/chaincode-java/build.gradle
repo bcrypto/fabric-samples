@@ -15,11 +15,14 @@ version '1.0-SNAPSHOT'
 dependencies {
     implementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.+'
     implementation 'org.json:json:+'
+    implementation 'by.bcrypto:bee2j:1.0'
+    implementation 'org.apache.santuario:xmlsec:4.0.2'
     testImplementation 'org.hyperledger.fabric-chaincode-java:fabric-chaincode-shim:2.+'
     testCompile "junit:junit:4.12" 
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
     maven {
         url 'https://jitpack.io'

@@ -19,6 +19,17 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 
 import java.util.Map;
 
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.InvalidAlgorithmParameterException;
+import org.xml.sax.SAXException;
+import java.security.KeyException;
+import javax.xml.crypto.dsig.XMLSignatureException;
+import javax.xml.crypto.MarshalException;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+
 /**
  * Main Chaincode class.
  *
@@ -120,7 +131,34 @@ public final class NoteContract implements ContractInterface {
 
         Note asset = new Note(assetID, shipper, reciever);
         NoteStatus status = new NoteStatus(assetID, shipper, reciever, "empty");
-
+        XmlDsig dsig = new XmlDsig(assetID, shipper, reciever, "empty");
+        try {
+            System.out.printf("Test XML-DSIG 1 %b\n", dsig.testXMLDsigSign());
+            System.out.printf("Test XML-DSIG 2 %b\n", dsig.testXMLDsigVerify());
+        } catch (NoSuchAlgorithmException e1) {
+            System.err.println("Algorithm is not found.");
+            e1.printStackTrace();
+        } catch (NoSuchProviderException e2) {
+            System.err.println("Provider is not found.");
+            e2.printStackTrace();
+        } catch (InvalidAlgorithmParameterException e5) {
+            e5.printStackTrace();
+        } catch (XMLSignatureException e2) {
+            System.out.println("XML Signature exception: file reading");
+            e2.printStackTrace();
+        } catch (ParserConfigurationException e1) {
+            e1.printStackTrace();
+        } catch (SAXException e3) {
+            e3.printStackTrace();
+        } catch (IOException e4) {
+            e4.printStackTrace();
+        } catch (KeyException e5) {
+            e5.printStackTrace();
+        } catch (TransformerException e5) {
+            e5.printStackTrace();
+        } catch (MarshalException e5) {
+            e5.printStackTrace();
+        }
         savePrivateData(ctx, assetID, asset);
         assetJSON = status.serialize();
         System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));

@@ -39,3 +39,9 @@ asset-transfer-basic/application-java/src/main/resources/out/
 asset-transfer-basic/chaincode-java/src/main/resources/out/
 result.xml
 *.id
+
+# CA keys
+test-network/organizations/fabric-ca/operator/msp/keystore/
+test-network/organizations/fabric-ca/operator/*.pem
+test-network/organizations/fabric-ca/operator/*.db
+test-network/organizations/fabric-ca/operator/*Key

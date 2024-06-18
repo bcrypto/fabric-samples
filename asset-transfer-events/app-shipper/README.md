@@ -1,6 +1,6 @@
 # Start network
 ```
-test-network$ ./network.sh up createChannel -c mychannel -ca
+test-network$ ./network.sh up createChannel -c mychannel -ca -s couchdb
 ```
 
 # Load smart-contract
@@ -16,4 +16,11 @@ asset-transfer-events/app-shipper$ ./gradlew run
 # Stop test network
 ```
 test-network$ ./network.sh down   
+```
+
+# Connect to CouchDB
+```
+http://127.0.0.1:5984/_utils
+login:admin
+pass:adminpw
 ```

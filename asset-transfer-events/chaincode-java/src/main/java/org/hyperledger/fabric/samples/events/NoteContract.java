@@ -57,7 +57,7 @@ import javax.xml.transform.TransformerException;
 public final class NoteContract implements ContractInterface {
 
     static final String IMPLICIT_COLLECTION_NAME_PREFIX = "_implicit_org_";
-    static final String COLLECTION_NAME = "SHIPPER_RECIEVER_COLLECTION";
+    static final String COLLECTION_NAME = "shipper_reciever_collection";
     static final String PRIVATE_PROPS_KEY = "asset_properties";
 
     /**
@@ -164,6 +164,10 @@ public final class NoteContract implements ContractInterface {
         System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));
 
         stub.putState(assetID, assetJSON);
+
+        if (isOperator(ctx)) {
+            UpdateAccount(ctx, shipper, false);
+        }
         // add Event data to the transaction data. Event will be published after the block containing
         // this transaction is committed
         stub.setEvent("CreateNote", assetJSON);
@@ -346,6 +350,33 @@ public final class NoteContract implements ContractInterface {
         //String clientMSPID = ctx.getClientIdentity().getMSPID();
         //String collectionName = IMPLICIT_COLLECTION_NAME_PREFIX + clientMSPID;
         return COLLECTION_NAME;
+    }
+
+    private boolean isOperator(final Context ctx) {
+        String peerMSPID = ctx.getStub().getMspId();
+        System.out.printf("peerMSPID: %s \n", peerMSPID);
+        String clientMSPID = ctx.getClientIdentity().getMSPID();
+        System.out.printf("clientMSPID: %s \n", clientMSPID);
+        return false;
+    }
+
+    private void UpdateAccount(final Context ctx, final String shipper, final boolean ttn) {
+        Account account = null;
+        String collection = "accounts";
+        System.out.printf(" UpdateAccount from collection %s, ID %s\n", collection, shipper);
+        byte[] propJSON = ctx.getStub().getPrivateData(collection, shipper);
+
+        if (propJSON != null && propJSON.length > 0) {
+            account = Account.deserialize(propJSON);
+        } else {
+            account = new Account(shipper, 0, 0);
+        }
+        int t = ttn ? 1 : 0;
+        Account newValue = new Account(
+            account.getAccountName(),
+            account.getTTNCount() + t,
+            account.getTNCount() + 1 - t);
+        ctx.getStub().putPrivateData(collection, shipper, newValue.serialize());
     }
 
     private enum AssetTransferErrors {

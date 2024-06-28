@@ -5,6 +5,7 @@
  */
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -98,41 +99,6 @@ public final class App {
         return doc;
     }
 
-	public static Document loadXMLFromString(final String xml) {
-        Document doc = null;
-        try {
-            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = factory.newDocumentBuilder();
-            InputSource is = new InputSource(new StringReader(xml));
-            doc = builder.parse(is);
-        } catch (ParserConfigurationException e2) {
-            e2.printStackTrace();
-        } catch (SAXException e3) {
-            e3.printStackTrace();
-        } catch (IOException e4) {
-            e4.printStackTrace();
-        }
-        return doc;
-    }
-
-    private void printItems(final String items) {
-        try {
-            Document doc = loadXMLFromString(items);
-            XPath xpath = XPathFactory.newInstance().newXPath();
-            NodeList nodes = (NodeList) xpath.compile("SG10/SG17").evaluate(doc, XPathConstants.NODESET);
-            System.out.printf("Quantity \tGTIN       \tNAME\n");
-            for (int i = 0; i < nodes.getLength(); i++) {
-                Node node = nodes.item(i);
-                String gtin  = xpath.compile("LIN/C212/E7140").evaluate(node).trim();
-                String qty  = xpath.compile("QTY/C186[child::E6411/text()!='OF']/E6060").evaluate(node).trim();
-                String name  = xpath.compile("IMD/C273/E7008").evaluate(node).trim();
-                System.out.printf("\t%s \t%s \t%s\n", qty, gtin, name);
-            }
-        } catch (XPathExpressionException e5) {
-            e5.printStackTrace();
-        }
-    }
-
 	public static void main(final String[] args) throws Exception {
 		var grpcChannel = Connections.newGrpcConnection();
 		var builder = Gateway.newInstance()
@@ -175,12 +141,21 @@ public final class App {
 					case 2:
 						assetId = scanEvents(eventSession);
 						System.out.println("Target Note " + assetId);
-						items = getItems();
-						printItems(items);
 						System.out.println("Press Enter to send RECADV message");
 						input = in.nextLine();
 						input = in.nextLine();
 						addAdvice(str);
+						System.out.println("Press Enter to export Note");
+						input = in.nextLine();
+			
+						String delnote = getAsset();
+						try{
+							FileOutputStream outputStream = new FileOutputStream("./result.xml");
+							outputStream.write(delnote.getBytes());
+							outputStream.close();
+						} catch (IOException e1) {
+							e1.printStackTrace();
+						}
 						break;
 					case 3:
 						// Replay events from the block containing the first transaction
@@ -195,6 +170,20 @@ public final class App {
 		} catch (FileNotFoundException e1) {
             e1.printStackTrace();
         }
+	}
+
+	private String getAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		byte[] result = null;
+		System.out.println("\n--> Evaluate transaction: ExportNote, " + assetId);
+		try {
+			result = contract.evaluateTransaction("ExportNote", assetId);
+			System.out.println("\n*** ExportNote evaluated successfully");
+		} catch (GatewayException e1) {
+			System.out.println("\n*** ExportNote wasn't evaluated");
+			e1.printStackTrace();
+		}
+		
+		return new String(result, UTF_8);
 	}
 
 	private CloseableIterator<ChaincodeEvent> startChaincodeEventListening() {
@@ -219,28 +208,6 @@ public final class App {
 	private String prettyJson(final String json) {
 		var parsedJson = JsonParser.parseString(json);
 		return gson.toJson(parsedJson);
-	}
-
-	private String getItems() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		byte[] result = null;
-		System.out.println("\n--> Evaluate transaction: ReadItems, " + assetId);
-		try {
-			result = contract.evaluateTransaction("ReadItems", assetId);
-			System.out.println("\n*** ReadItems evaluated successfully");
-		} catch (GatewayException e1) {
-			System.out.println("\n*** ReadItems wasn't evaluated");
-			//e1.printStackTrace();
-			return null;
-		}
-		return new String(result, UTF_8);
-	}
-
-	private void updateAsset(String asset) throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: UpdateItems for " + assetId);
-
-		contract.submitTransaction("UpdateItems", assetId, asset);
-
-		System.out.println("\n*** UpdateItems committed successfully");
 	}
 
 	private void addAdvice(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {

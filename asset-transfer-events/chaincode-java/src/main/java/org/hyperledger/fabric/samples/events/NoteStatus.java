@@ -92,7 +92,7 @@ public final class NoteStatus {
     }
 
     public String serialize(final String privateProps) {
-        Map<String, Object> tMap = new HashMap();
+        Map<String, Object> tMap = new HashMap<String, Object>();
         tMap.put("ID", noteID);
         tMap.put("Shipper",  shipper);
         tMap.put("Reciever",  reciever);

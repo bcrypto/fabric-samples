@@ -30,16 +30,13 @@ public final class Note {
     private String reciever;
 
     @Property()
-    private String asset;
-
-    @Property()
     private ArrayList<String> advices;
 
     public Note(final String ID, final String shipper, final String reciever) {
         noteID = ID;
         this.shipper = shipper;
         this.reciever = reciever;
-        advices = new ArrayList();
+        advices = new ArrayList<String>();
     }
 
     /**
@@ -78,20 +75,6 @@ public final class Note {
     }
 
     /**
-     * @return String return the asset
-     */
-    public String getAsset() {
-        return asset;
-    }
-
-    /**
-     * @param asset the asset to set
-     */
-    public void setAsset(final String assetValue) {
-        asset = assetValue;
-    }
-
-    /**
      * @return String[] return the advices
      */
     public ArrayList<String> getAdvices() {
@@ -119,11 +102,10 @@ public final class Note {
     }
 
     public String serialize(final String privateProps) {
-        Map<String, Object> tMap = new HashMap();
+        Map<String, Object> tMap = new HashMap<String, Object>();
         tMap.put("ID", noteID);
         tMap.put("Shipper",  shipper);
         tMap.put("Reciever",  reciever);
-        tMap.put("Asset", asset);
         tMap.put("Advices", advices.toArray());
         if (privateProps != null && privateProps.length() > 0) {
             tMap.put("asset_properties", new JSONObject(privateProps));
@@ -134,7 +116,6 @@ public final class Note {
     public String export() {
         String result = "<DELNOTE>\n"
             + String.join("\n", advices)
-            + "\n<ITEMS>\n" + asset + "\n</ITEMS>\n"
             + "</DELNOTE>";
         return result;
     }
@@ -152,9 +133,6 @@ public final class Note {
         final String shipper = (String) tMap.get("Shipper");
         final String reciever = (String) tMap.get("Reciever");
         Note result = new Note(id, shipper, reciever);
-        if (tMap.containsKey("Asset")) {
-            result.setAsset((String) tMap.get("Asset"));
-        }
         if (tMap.containsKey("Advices")) {
             JSONArray array = json.getJSONArray("Advices");
             var list = new ArrayList<String>(array.length());
@@ -179,22 +157,22 @@ public final class Note {
         Note other = (Note) obj;
 
         return Objects.deepEquals(
-                new String[]{getID(), getShipper(), getReciever(), getAsset()},
-                new String[]{other.getID(), other.getShipper(), other.getReciever(), other.getAsset()})
+                new String[]{getID(), getShipper(), getReciever()},
+                new String[]{other.getID(), other.getShipper(), other.getReciever()})
                 &&
                 Objects.deepEquals(getAdvices(), other.getAdvices());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getID(), getShipper(), getReciever(), getAsset(), String.join("\n", getAdvices()));
+        return Objects.hash(getID(), getReciever(), String.join("\n", getAdvices()));
     }
 
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode())
                 + " [ID=" + noteID + ", shipper=" + shipper + ", reciever=" + reciever
-                + ", asset=" + asset + ", advices=<...>]";
+                + ", advices=<...>]";
     }
 
 

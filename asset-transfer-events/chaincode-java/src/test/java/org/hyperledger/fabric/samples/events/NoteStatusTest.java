@@ -1,10 +1,12 @@
 // ./gradlew clean test --info
 
+package org.hyperledger.fabric.samples.events;
+
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
-import org.hyperledger.fabric.samples.events.NoteStatus;
+//import org.hyperledger.fabric.samples.events.NoteStatus;
 
 public final class NoteStatusTest {
 

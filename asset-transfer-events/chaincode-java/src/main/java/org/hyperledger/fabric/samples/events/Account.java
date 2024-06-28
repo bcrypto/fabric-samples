@@ -55,7 +55,7 @@ public final class Account {
     }
 
     public String serialize() {
-        Map<String, Object> tMap = new HashMap();
+        Map<String, Object> tMap = new HashMap<String, Object>();
         tMap.put("accountName", accountName);
         tMap.put("ttnCount",  ttnCount);
         tMap.put("tnCount",  tnCount);

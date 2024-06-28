@@ -68,26 +68,10 @@ public final class NoteContract implements ContractInterface {
      * @return the asset found on the ledger. Returns error if asset is not found
      */
     @Transaction(intent = Transaction.TYPE.EVALUATE)
-    public String ReadItems(final Context ctx, final String assetID) {
-        System.out.printf("ReadItems: ID %s\n", assetID);
-
-        NoteStatus note = getState(ctx, assetID);
-        Note privData = readPrivateData(ctx, assetID);
-        return privData.getAsset();
-    }
-
-    /**
-     * Retrieves the asset details with the specified ID
-     *
-     * @param ctx     the transaction context
-     * @param assetID the ID of the asset
-     * @return the asset found on the ledger. Returns error if asset is not found
-     */
-    @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String ExportNote(final Context ctx, final String assetID) {
         System.out.printf("ExportNote: ID %s\n", assetID);
 
-        NoteStatus note = getState(ctx, assetID);
+        //NoteStatus note = getState(ctx, assetID);
         Note privData = readPrivateData(ctx, assetID);
         return privData.export();
     }
@@ -216,46 +200,6 @@ public final class NoteContract implements ContractInterface {
     }
 
     /**
-     * Update existing asset on the ledger with provided parameters.
-     * Saves the passed private data (asset properties) from transient map input.
-     *
-     * @param ctx            the transaction context
-     *                       Transient map with asset_properties key with asset json as value
-     * @param assetID
-     * @param asset
-     * @return the created asset
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public NoteStatus UpdateItems(final Context ctx, final String assetID, final String message) {
-        ChaincodeStub stub = ctx.getStub();
-        // input validations
-        String errorMessage = null;
-        if (assetID == null || assetID.equals("")) {
-            errorMessage = String.format("Empty input: assetID");
-        }
-
-        if (errorMessage != null) {
-            System.err.println(errorMessage);
-            throw new ChaincodeException(errorMessage, AssetTransferErrors.INCOMPLETE_INPUT.toString());
-        }
-        // reads from the Statedb. Check if asset already exists
-        NoteStatus status = getState(ctx, assetID);
-        status.setStatus(message);
-        Note privData = readPrivateData(ctx, assetID);
-        String asset = acceptPrivateData(ctx, PRIVATE_PROPS_KEY);
-        if (asset != null) {
-            privData.setAsset(asset);
-            savePrivateData(ctx, assetID, privData);
-        }
-
-        byte[] assetJSON = status.serialize();
-        System.out.printf("UpdateItems Put: ID %s Data %s\n", assetID, new String(assetJSON));
-        stub.putState(assetID, assetJSON);
-        stub.setEvent("UpdateItems", assetJSON); //publish Event
-        return status;
-    }
-
-    /**
      * Deletes a asset & related details from the ledger.
      *
      * @param ctx the transaction context
@@ -321,7 +265,6 @@ public final class NoteContract implements ContractInterface {
     private String acceptPrivateData(final Context ctx, final String field) {
         String peerMSPID = ctx.getStub().getMspId();
         String clientMSPID = ctx.getClientIdentity().getMSPID();
-        String implicitCollectionName = getCollectionName(ctx);
         byte[] transientAsset = null;
 
         if (peerMSPID.equals(clientMSPID)) {

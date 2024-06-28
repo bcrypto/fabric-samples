@@ -9,28 +9,13 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import java.nio.file.Paths;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
-
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.ParserConfigurationException;
-
-import java.io.StringWriter;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.TransformerException;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
-
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
-
-import static java.nio.charset.StandardCharsets.UTF_8;
+import javax.xml.crypto.dsig.XMLSignatureException;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -56,69 +41,17 @@ public final class App {
 	private static final String channelName = "mychannel";
 	private static final String chaincodeName = "events";
 	static final String PRIVATE_PROPS_KEY = "asset_properties";
+	private static final String FnpPrivateKeyPath = Paths.get("privkey.der").toString();
+	private static final String FnpCertificatePath = Paths.get("cert.der").toString();
+	private static final String FnpPassword = "fnpfnpfnp";
+
+
 
 	private final Network network;
 	private final Contract contract;
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
-    //method to convert Document to String
-    public String getStringFromDocument(final Document doc) {
-        try {
-            DOMSource domSource = new DOMSource(doc);
-            StringWriter writer = new StringWriter();
-            StreamResult result = new StreamResult(writer);
-            TransformerFactory tf = TransformerFactory.newInstance();
-            Transformer transformer = tf.newTransformer();
-            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-            transformer.setOutputProperty(OutputKeys.INDENT, "no");
-            transformer.transform(domSource, result);
-            return writer.toString();
-        } catch (TransformerException ex) {
-            ex.printStackTrace();
-            return null;
-        }
-    }
-
-    private String nodeToString(final Node node) {
-        StringWriter sw = new StringWriter();
-        try {
-            Transformer t = TransformerFactory.newInstance().newTransformer();
-            t.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
-            t.setOutputProperty(OutputKeys.INDENT, "no");
-            t.transform(new DOMSource(node), new StreamResult(sw));
-        } catch (TransformerException te) {
-            System.out.println("nodeToString Transformer Exception");
-        }
-        return sw.toString();
-    }
-
-    private Document loadXML(final File file) throws FileNotFoundException {
-        Document doc = null;
-        try {
-            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = dbf.newDocumentBuilder();
-            doc = builder.parse(new FileInputStream(file));
-        } catch (ParserConfigurationException e2) {
-            e2.printStackTrace();
-        } catch (SAXException e3) {
-            e3.printStackTrace();
-        } catch (IOException e4) {
-            e4.printStackTrace();
-        }
-        return doc;
-    }
-
-    private String loadXMLNode(final Document doc, final String xpath) {
-        Node node = null;
-        try {
-            XPath xPath = XPathFactory.newInstance().newXPath();
-            String expression = "/DESADV/SG10";
-            node = (Node) xPath.compile(expression).evaluate(doc, XPathConstants.NODE);
-        } catch (XPathExpressionException e5) {
-            e5.printStackTrace();
-        }
-        return nodeToString(node);
-    }
+ 
 
 	public static void main(final String[] args) throws Exception {
 		var grpcChannel = Connections.newGrpcConnection();
@@ -143,16 +76,22 @@ public final class App {
 		contract = network.getContract(chaincodeName);
 	}
 
-	public void run() throws EndorseException, SubmitException, CommitStatusException, CommitException {
+	public void run() throws IOException, XMLSignatureException, EndorseException, SubmitException, CommitStatusException, CommitException {
+		
+		Signer signer = new Signer();
+		signer.loadCertificate(FnpCertificatePath);
+		signer.loadPrivateKey(FnpPrivateKeyPath, FnpPassword);
+
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
 			// Prepare resources
 			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("desadv.xml").getFile());
-            Document doc = loadXML(file);
-            String expression = "/DESADV/SG10";
-            String str = getStringFromDocument(doc);
-            String goods = loadXMLNode(doc, expression);
+            Document doc = XmlUtils.loadXML(file);
+            //String expression = "/DESADV/SG10";
+            String str = XmlUtils.getStringFromDocument(doc);
+            //String goods = loadXMLNode(doc, expression);
+			String signature = signer.signDocument(doc, "#desadv1");
 			
 			System.out.println("Press Enter to create Note");
 			Scanner in = new Scanner(System.in);
@@ -163,8 +102,9 @@ public final class App {
 			System.out.println("Press Enter to load DESADV message");
 			name = in.nextLine();
 
- 			updateAsset(goods);
+ 			//updateAsset(goods);
 			addAdvice(str);
+			addAdvice(signature);
 
 			System.out.println("Press Enter to export Note");
 			name = in.nextLine();

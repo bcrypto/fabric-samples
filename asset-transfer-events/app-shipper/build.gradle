@@ -4,6 +4,7 @@ plugins {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -11,6 +12,8 @@ dependencies {
     implementation 'org.hyperledger.fabric:fabric-gateway:1.2.2'
     compileOnly 'io.grpc:grpc-api:1.54.1'
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.54.1'
+    implementation 'by.bcrypto:bee2j:1.0'
+    implementation 'org.apache.santuario:xmlsec:4.0.2'
     implementation 'com.google.code.gson:gson:2.10.1'
 }
 

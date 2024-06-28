@@ -40,12 +40,11 @@ import java.util.*;
 public final class App {
 	private static final String channelName = "mychannel";
 	private static final String chaincodeName = "events";
-	static final String PRIVATE_PROPS_KEY = "asset_properties";
+	private static final String PRIVATE_MSG_KEY = "edifact_message";
+    private static final String PRIVATE_XMLDSIG_KEY = "message_signature";
 	private static final String FnpPrivateKeyPath = Paths.get("privkey.der").toString();
 	private static final String FnpCertificatePath = Paths.get("cert.der").toString();
 	private static final String FnpPassword = "fnpfnpfnp";
-
-
 
 	private final Network network;
 	private final Contract contract;
@@ -88,9 +87,7 @@ public final class App {
 			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("desadv.xml").getFile());
             Document doc = XmlUtils.loadXML(file);
-            //String expression = "/DESADV/SG10";
             String str = XmlUtils.getStringFromDocument(doc);
-            //String goods = loadXMLNode(doc, expression);
 			String signature = signer.signDocument(doc, "#desadv1");
 			
 			System.out.println("Press Enter to create Note");
@@ -102,9 +99,9 @@ public final class App {
 			System.out.println("Press Enter to load DESADV message");
 			name = in.nextLine();
 
- 			//updateAsset(goods);
-			addAdvice(str);
-			addAdvice(signature);
+			//addAdvice(str);
+			//addAdvice(signature);
+			addSignedAdvice(str, signature);
 
 			System.out.println("Press Enter to export Note");
 			name = in.nextLine();
@@ -176,42 +173,12 @@ public final class App {
 		return status.getBlockNumber();
 	}
 
-	private void updateAsset(String asset) throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: UpdateItems for " + assetId);
-
-		//contract.submitTransaction("UpdateItems", assetId, asset);
-		//var transaction = contract.createTransaction("UpdateItems");
-		//var transientMap = new HashMap<String, byte[]>();
-		//transientMap.put(PRIVATE_PROPS_KEY, asset.getBytes(UTF_8));
-		//transaction.setTransient(transientMap);
-		//transaction.submit();
-		var commit = contract.newProposal("UpdateItems")
-				.addArguments(assetId, "1")
-				.putTransient(PRIVATE_PROPS_KEY, asset)
-				.build()
-				.endorse()
-				.submitAsync();
-
-		var status = commit.getStatus();
-		if (!status.isSuccessful()) {
-			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
-		}
-
-		System.out.println("\n*** UpdateItems committed successfully");
-	}
-
 	private void addAdvice(String advice) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
-		//contract.submitTransaction("AddAdvice", assetId, advice);
-		//var transaction = contract.createTransaction("AddAdvice");
-		//var transientMap = new HashMap<String, byte[]>();
-		//transientMap.put(PRIVATE_PROPS_KEY, advice.getBytes(UTF_8));
-		//transaction.setTransient(transientMap);
-		//transaction.submit();
 		var commit = contract.newProposal("AddAdvice")
 				.addArguments(assetId, "2")
-				.putTransient(PRIVATE_PROPS_KEY, advice)
+				.putTransient(PRIVATE_MSG_KEY, advice)
 				.build()
 				.endorse()
 				.submitAsync();
@@ -222,6 +189,25 @@ public final class App {
 		}
 
 		System.out.println("\n*** AddAdvice committed successfully");
+	}
+
+	private void addSignedAdvice(String advice, String signature) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		System.out.println("\n--> Submit transaction: AddSignedAdvice for " + assetId);
+
+		var commit = contract.newProposal("AddSignedAdvice")
+				.addArguments(assetId, "2")
+				.putTransient(PRIVATE_MSG_KEY, advice)
+				.putTransient(PRIVATE_XMLDSIG_KEY, signature)
+				.build()
+				.endorse()
+				.submitAsync();
+
+		var status = commit.getStatus();
+		if (!status.isSuccessful()) {
+			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
+		}
+
+		System.out.println("\n*** AddSignedAdvice committed successfully");
 	}
 
 	private String getAsset() throws EndorseException, SubmitException, CommitStatusException, CommitException {
@@ -235,19 +221,6 @@ public final class App {
 			e1.printStackTrace();
 		}
 		
-		return new String(result, UTF_8);
-	}
-
-	private String getItems() throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		byte[] result = null;
-		System.out.println("\n--> Evaluate transaction: ReadItems, " + assetId);
-		try {
-			result = contract.evaluateTransaction("ReadItems", assetId);
-			System.out.println("\n*** ReadItems evaluated successfully");
-		} catch (GatewayException e1) {
-			System.out.println("\n*** ReadItems wasn't evaluated");
-			e1.printStackTrace();
-		}
 		return new String(result, UTF_8);
 	}
 

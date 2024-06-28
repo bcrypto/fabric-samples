@@ -8,6 +8,7 @@ import by.bcrypto.bee2j.Bee2Library;
 import by.bcrypto.bee2j.constants.XmlIdConstants;
 import by.bcrypto.bee2j.provider.Bee2SecurityProvider;
 import by.bcrypto.bee2j.provider.BrngSecureRandom;
+import by.bcrypto.bee2j.provider.pki.BignCertificate;
 
 import java.security.InvalidAlgorithmParameterException;
 import java.security.Key;
@@ -19,6 +20,7 @@ import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.Security;
 import java.security.Provider;
+import java.security.cert.X509Certificate;
 
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.crypto.dsig.Reference;
@@ -45,6 +47,7 @@ import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.crypto.dsig.keyinfo.KeyInfo;
 import javax.xml.crypto.dsig.keyinfo.KeyInfoFactory;
 import javax.xml.crypto.dsig.keyinfo.KeyValue;
+import javax.xml.crypto.dsig.keyinfo.X509Data;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -60,11 +63,20 @@ import javax.xml.transform.stream.StreamResult;
 import java.util.List;
 
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
 
 public final class XmlDsig {
+
+    public XmlDsig() {
+        Provider dsigProvider = new XMLDSigRI();
+        Security.insertProviderAt(dsigProvider, 1);
+        Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
+        Security.addProvider(bee2j);
+    }
 
     /**
      * KeySelector which retrieves the public key out of the
@@ -100,6 +112,22 @@ public final class XmlDsig {
                         return new SimpleKeySelectorResult(pk);
                     }
                 }
+                if (xmlStructure instanceof X509Data) {
+                    PublicKey pk = null;
+                    X509Data x509Data = (X509Data) xmlStructure;
+                    List<?> x509DataList = x509Data.getContent();
+                    for (Object x509DataObject : x509DataList) {
+                        if (x509DataObject instanceof X509Certificate) {
+                            BignCertificate bc = new BignCertificate((X509Certificate) x509DataObject);
+                            pk = bc.getPublicKey();
+                            break;
+                        }
+                    }
+                    // make sure algorithm is compatible with method
+                    if (algEquals(sm.getAlgorithm(), pk.getAlgorithm())) {
+                        return new SimpleKeySelectorResult(pk);
+                    }
+                }
             }
             throw new KeySelectorException("No KeyValue element found!");
         }
@@ -130,58 +158,7 @@ public final class XmlDsig {
         }
     }
 
-    private final String noteID;
-
-    private String shipper;
-
-    private String reciever;
-
     private String status;
-
-    public XmlDsig(final String ID, final String shipper, final String reciever, final String status) {
-        noteID = ID;
-        this.shipper = shipper;
-        this.reciever = reciever;
-        this.status = status;
-
-        Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
-        Security.addProvider(bee2j);
-    }
-
-    /**
-     * @return String return the noteID
-     */
-    public String getID() {
-        return noteID;
-    }
-
-    /**
-     * @return String return the shipper
-     */
-    public String getShipper() {
-        return shipper;
-    }
-
-    /**
-     * @param shipperName the shipper to set
-     */
-    public void setShipper(final String shipperName) {
-        shipper = shipperName;
-    }
-
-    /**
-     * @return String return the reciever
-     */
-    public String getReciever() {
-        return reciever;
-    }
-
-    /**
-     * @param recieverName the reciever to set
-     */
-    public void setReciever(final String recieverName) {
-        this.reciever = recieverName;
-    }
 
     /**
      * @param statusValue the status to set
@@ -190,7 +167,7 @@ public final class XmlDsig {
         this.status = statusValue;
     }
 
-        /**
+    /**
      * @return String return the status
      */
     public String getStatus() {
@@ -199,17 +176,88 @@ public final class XmlDsig {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode())
-                + " [ID=" + noteID + ", shipper=" + shipper + ", reciever=" + reciever
-                + ", status=" + status + "]";
+        return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode());
+    }
+
+
+    public boolean verify(final String docString) throws XMLSignatureException {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setNamespaceAware(true);
+
+        InputStream targetStream = new ByteArrayInputStream(docString.getBytes());
+        Document doc;
+        try {
+            doc = dbf.newDocumentBuilder().parse(targetStream);
+        } catch (IOException e) {
+            throw new XMLSignatureException(e);
+        } catch (ParserConfigurationException e) {
+            throw new XMLSignatureException(e);
+        } catch (SAXException e) {
+            throw new XMLSignatureException(e);
+        }
+
+        NodeList nl = doc.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (1 != nl.getLength()) {
+            return false;
+        }
+
+        DOMValidateContext valContext = new DOMValidateContext(
+            new KeyValueKeySelector(), nl.item(0));
+
+        final NodeList elements = doc.getDocumentElement().getChildNodes();
+        for (int i = 0; i < elements.getLength(); i++) {
+            Node node = elements.item(i);
+            if (node.getLocalName() != "Signature") {
+                valContext.setIdAttributeNS((Element) node, null, "id");
+            }
+        }
+
+        XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
+
+        XMLSignature signature;
+        try {
+            signature = fac.unmarshalXMLSignature(valContext);
+        } catch (MarshalException e) {
+            throw new XMLSignatureException(e);
+        }
+        valContext.setProperty("javax.xml.crypto.dsig.cacheReference", true);
+
+        boolean coreValidity = signature.validate(valContext);
+        boolean sv = true;
+        // Check core validation status
+        if (!coreValidity) {
+            System.err.println("Signature failed core validation");
+            sv = signature.getSignatureValue().validate(valContext);
+            System.out.println("signature validation status: " + sv);
+            // check the validation status of each Reference
+            Iterator<Reference> i =
+                signature.getSignedInfo().getReferences().iterator();
+            for (int j = 0; i.hasNext(); j++) {
+                boolean refValid = i.next().validate(valContext);
+                System.out.println("ref[" + j + "] validity status: " + refValid);
+            }
+        } else {
+            System.out.println("Signature passed core validation");
+        }
+        if (!coreValidity) {
+            return false;
+        }
+        if (!sv) {
+            return false;
+        }
+        return true;
+    }
+
+    public boolean verify(final String message, final String signature) throws XMLSignatureException {
+        if (message == null || signature == null) {
+            return false;
+        }
+        String doc = "<DELNOTE>" + message + signature + "</DELNOTE>";
+        return verify(doc);
     }
 
     public boolean testXMLDsigSign() throws NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, KeyException, SAXException, IOException, ParserConfigurationException, MarshalException, XMLSignatureException, TransformerException {
 
-        Provider dsigProvider = new XMLDSigRI();
-        Security.insertProviderAt(dsigProvider, 1);
-        Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
-        Security.addProvider(bee2j);
 
         // Create a DOM XMLSignatureFactory that will be used to generate the
         // enveloped signature

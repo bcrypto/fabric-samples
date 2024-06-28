@@ -58,8 +58,13 @@ public final class NoteContract implements ContractInterface {
 
     static final String IMPLICIT_COLLECTION_NAME_PREFIX = "_implicit_org_";
     static final String COLLECTION_NAME = "shipper_reciever_collection";
-    static final String PRIVATE_PROPS_KEY = "asset_properties";
+    static final String PRIVATE_MSG_KEY = "edifact_message";
+    static final String PRIVATE_XMLDSIG_KEY = "message_signature";
+    final XmlDsig dsig;
 
+    public NoteContract() {
+        this.dsig = new XmlDsig();
+    }
     /**
      * Retrieves the asset details with the specified ID
      *
@@ -115,7 +120,6 @@ public final class NoteContract implements ContractInterface {
 
         Note asset = new Note(assetID, shipper, reciever);
         NoteStatus status = new NoteStatus(assetID, shipper, reciever, "empty");
-        XmlDsig dsig = new XmlDsig(assetID, shipper, reciever, "empty");
         try {
             System.out.printf("Test XML-DSIG 1 %b\n", dsig.testXMLDsigSign());
             System.out.printf("Test XML-DSIG 2 %b\n", dsig.testXMLDsigVerify());
@@ -185,7 +189,7 @@ public final class NoteContract implements ContractInterface {
         status.setStatus(message);
         // Add advice
         Note privData = readPrivateData(ctx, assetID);
-        String asset = acceptPrivateData(ctx, PRIVATE_PROPS_KEY);
+        String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
         if (asset != null) {
             privData.addAdvice(asset);
             savePrivateData(ctx, assetID, privData);
@@ -198,6 +202,51 @@ public final class NoteContract implements ContractInterface {
         stub.putState(assetID, assetJSON);
         stub.setEvent("AddAdvice", assetJSON); //publish Event
     }
+
+
+    /**
+     * AddAdvice adds advice
+     *   Save any private data, if provided in transient map
+     *
+     * @param ctx the transaction context
+     * @param assetID asset to delete
+     * @param advice new advice for the note
+     * @return none
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public void AddSignedAdvice(final Context ctx, final String assetID, final String message) {
+        ChaincodeStub stub = ctx.getStub();
+        String errorMessage = null;
+
+        if (assetID == null || assetID.equals("")) {
+            errorMessage = "Empty input: assetID";
+        }
+        if (errorMessage != null) {
+            System.err.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.INCOMPLETE_INPUT.toString());
+        }
+        System.out.printf("AddSignedAdvice: verify asset %s exists\n", assetID);
+        NoteStatus status = getState(ctx, assetID);
+        status.setStatus(message);
+        // Add advice
+        Note privData = readPrivateData(ctx, assetID);
+        String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
+        String signature = acceptPrivateData(ctx, PRIVATE_XMLDSIG_KEY);
+        try {
+            if (dsig.verify(asset, signature)) {
+                privData.addAdvice(asset);
+                savePrivateData(ctx, assetID, privData);
+                System.out.printf(" Add Signed Advice: ID %s\n", assetID);
+                byte[] assetJSON = status.serialize();
+                stub.putState(assetID, assetJSON);
+                stub.setEvent("AddSignedAdvice", assetJSON);
+            }
+        } catch (XMLSignatureException e) {
+            System.out.printf("AddSignedAdvice: XML signature error\n");
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Deletes a asset & related details from the ledger.

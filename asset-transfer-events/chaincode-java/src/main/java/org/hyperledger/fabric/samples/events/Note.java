@@ -4,18 +4,20 @@
 
 package org.hyperledger.fabric.samples.events;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.ArrayList;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import java.io.IOException;
+
 import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
-
-import org.json.JSONObject;
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 @DataType()
 public final class Note {
@@ -30,13 +32,22 @@ public final class Note {
     private String reciever;
 
     @Property()
-    private ArrayList<String> advices;
+    private String status;
+
+    @Property()
+    private HashMap<String, String> messages;
+
+    @Property()
+    private List<XmlSignature> signatures;
+    //private HashMap<String, String> signatures;
 
     public Note(final String ID, final String shipper, final String reciever) {
         noteID = ID;
         this.shipper = shipper;
         this.reciever = reciever;
-        advices = new ArrayList<String>();
+        this.status = "0";
+        messages = new HashMap<String, String>();
+        signatures = new ArrayList<XmlSignature>();
     }
 
     /**
@@ -74,26 +85,76 @@ public final class Note {
         this.reciever = recieverName;
     }
 
-    /**
-     * @return String[] return the advices
+        /**
+     * @param statusValue the status to set
      */
-    public ArrayList<String> getAdvices() {
-        return advices;
+    public void setStatus(final String statusValue) {
+        this.status = statusValue;
     }
 
     /**
-     * @param advices the advices to set
+     * @return String return the status
      */
-    public void setAdvices(final ArrayList<String> advicesList) {
-        advices.clear();
-        advices.addAll(advicesList);
+    public String getStatus() {
+        return status;
     }
 
     /**
-     * @param advices the advices to set
+     * @return HashMap<String, String> return the messages
      */
-    public void addAdvice(final String advice) {
-        advices.add(advice);
+    public HashMap<String, String> getMessages() {
+        return messages;
+    }
+
+    /**
+     * @param msg the messages to set
+     */
+    public void setMessages(final Map<String, String> msg) {
+        messages.clear();
+        messages.putAll(msg);
+    }
+
+
+    /**
+     * @return List<XmlSignature> return the signatures
+     */
+    public List<XmlSignature> getSignatures() {
+        return signatures;
+    }
+
+    /**
+     * @param signatures the signatures to set
+     */
+    public void setSignatures(final List<XmlSignature> sgn) {
+        signatures.clear();
+        signatures.addAll(sgn);
+    }
+
+    /**
+     * @param id the message id
+     * @param message the message to set
+     */
+    public void addMessage(final String id, final String message) {
+        messages.put(id, message);
+    }
+
+    /**
+     * @param id the signature id
+     * @param signature the signature to set
+     * @throws IOException
+     */
+    public void addSignature(final String signature) throws IOException {
+        signatures.add(new XmlSignature(signature));
+    }
+
+    /**
+     * @param id the signature id
+     * @param signature the signature to set
+     * @throws IOException
+     */
+    public void addSignedMessage(final String id, final String message, final String signature) throws IOException {
+        messages.put(id, message);
+        addSignature(signature);
     }
 
      // Serialize asset without private properties
@@ -106,7 +167,9 @@ public final class Note {
         tMap.put("ID", noteID);
         tMap.put("Shipper",  shipper);
         tMap.put("Reciever",  reciever);
-        tMap.put("Advices", advices.toArray());
+        tMap.put("Status",  status);
+        tMap.put("Messages", new JSONObject(messages));
+        tMap.put("Signatures", signatures.stream().map(x -> x.toJson()).toArray());
         if (privateProps != null && privateProps.length() > 0) {
             tMap.put("asset_properties", new JSONObject(privateProps));
         }
@@ -115,7 +178,8 @@ public final class Note {
 
     public String export() {
         String result = "<DELNOTE>\n"
-            + String.join("\n", advices)
+            + String.join("\n", messages.values()) + "\n"
+            + signatures.stream().map(x -> x.getText()).reduce("\n", (x, y) -> String.join(x, y))
             + "</DELNOTE>";
         return result;
     }
@@ -132,14 +196,24 @@ public final class Note {
 
         final String shipper = (String) tMap.get("Shipper");
         final String reciever = (String) tMap.get("Reciever");
+        final String status = (String) tMap.get("Status");
         Note result = new Note(id, shipper, reciever);
-        if (tMap.containsKey("Advices")) {
-            JSONArray array = json.getJSONArray("Advices");
-            var list = new ArrayList<String>(array.length());
+        result.setStatus(status);
+        if (tMap.containsKey("Messages")) {
+            JSONObject obj = json.getJSONObject("Messages");
+            var list = new HashMap<String, String>(obj.length());
+            obj.keySet().forEach(key -> {
+                list.put(key, obj.getString(key));
+            });
+            result.setMessages(list);
+        }
+        if (tMap.containsKey("Signatures")) {
+            JSONArray array = new JSONArray(json.getJSONArray("Signatures"));
+            var list = new ArrayList<XmlSignature>(array.length());
             for (int i = 0; i < array.length(); i++) {
-                list.add(array.getString(i));
+                list.add(XmlSignature.fromJson(array.getJSONObject(i)));
             }
-            result.setAdvices(list);
+            result.setSignatures(list);
         }
         return result;
     }
@@ -157,22 +231,23 @@ public final class Note {
         Note other = (Note) obj;
 
         return Objects.deepEquals(
-                new String[]{getID(), getShipper(), getReciever()},
-                new String[]{other.getID(), other.getShipper(), other.getReciever()})
-                &&
-                Objects.deepEquals(getAdvices(), other.getAdvices());
+            new String[]{getID(), getShipper(), getReciever()},
+            new String[]{other.getID(), other.getShipper(), other.getReciever()})
+            && Objects.deepEquals(getMessages(), other.getMessages())
+            && Objects.deepEquals(getSignatures(), other.getSignatures());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(getID(), getReciever(), String.join("\n", getAdvices()));
+        return Objects.hash(getID(), getShipper(), getReciever(), getMessages(), getSignatures());
     }
 
     @Override
     public String toString() {
         return this.getClass().getSimpleName() + "@" + Integer.toHexString(hashCode())
                 + " [ID=" + noteID + ", shipper=" + shipper + ", reciever=" + reciever
-                + ", advices=<...>]";
+                + ", status=" + status
+                + ", messages=<...>, signatures=<...>]";
     }
 
 

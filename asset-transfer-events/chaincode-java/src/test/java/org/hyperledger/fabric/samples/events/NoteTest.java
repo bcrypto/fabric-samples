@@ -98,9 +98,10 @@ public final class NoteTest {
             File file = new File(classLoader.getResource("desadv.xml").getFile());
             Document doc = loadXML(file);
             String str = getStringFromDocument(doc);
-            dn.addAdvice(str);
+            String id = XmlUtils.getMessageId(str);
+            dn.addMessage(id, str);
             System.out.println(dn.serialize("{}"));
-            Note nt = Note.deserialize("{\"Shipper\":\"10\",\"Advices\":[],\"ID\":\"asset1702977878704\",\"Reciever\":\"100\"}");
+            Note nt = Note.deserialize("{\"Shipper\":\"10\",\"ID\":\"asset1702977878704\",\"Reciever\":\"100\"}");
             System.out.println(nt.toString());
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();

@@ -191,7 +191,8 @@ public final class NoteContract implements ContractInterface {
         Note privData = readPrivateData(ctx, assetID);
         String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
         if (asset != null) {
-            privData.addAdvice(asset);
+            String id = XmlUtils.getMessageId(asset);
+            privData.addMessage(id, asset);
             savePrivateData(ctx, assetID, privData);
         }
 
@@ -205,7 +206,7 @@ public final class NoteContract implements ContractInterface {
 
 
     /**
-     * AddAdvice adds advice
+     * AddSignedAdvice adds advice and signature
      *   Save any private data, if provided in transient map
      *
      * @param ctx the transaction context
@@ -234,7 +235,8 @@ public final class NoteContract implements ContractInterface {
         String signature = acceptPrivateData(ctx, PRIVATE_XMLDSIG_KEY);
         try {
             if (dsig.verify(asset, signature)) {
-                privData.addAdvice(asset);
+                String id = XmlUtils.getMessageId(asset);
+                privData.addSignedMessage(id, asset, signature);
                 savePrivateData(ctx, assetID, privData);
                 System.out.printf(" Add Signed Advice: ID %s\n", assetID);
                 byte[] assetJSON = status.serialize();
@@ -243,6 +245,9 @@ public final class NoteContract implements ContractInterface {
             }
         } catch (XMLSignatureException e) {
             System.out.printf("AddSignedAdvice: XML signature error\n");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.printf("AddSignedAdvice: XML reference error\n");
             e.printStackTrace();
         }
     }

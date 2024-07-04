@@ -13,8 +13,6 @@ import java.nio.file.Paths;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.xml.sax.SAXException;
 import javax.xml.crypto.dsig.XMLSignatureException;
 
 import com.google.gson.Gson;
@@ -177,7 +175,7 @@ public final class App {
 		System.out.println("\n--> Submit transaction: AddAdvice for " + assetId);
 
 		var commit = contract.newProposal("AddAdvice")
-				.addArguments(assetId, "2")
+				.addArguments(assetId)
 				.putTransient(PRIVATE_MSG_KEY, advice)
 				.build()
 				.endorse()
@@ -195,7 +193,7 @@ public final class App {
 		System.out.println("\n--> Submit transaction: AddSignedAdvice for " + assetId);
 
 		var commit = contract.newProposal("AddSignedAdvice")
-				.addArguments(assetId, "2")
+				.addArguments(assetId)
 				.putTransient(PRIVATE_MSG_KEY, advice)
 				.putTransient(PRIVATE_XMLDSIG_KEY, signature)
 				.build()

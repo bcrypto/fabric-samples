@@ -135,7 +135,17 @@ public final class Note {
      * @param message the message to set
      */
     public void addMessage(final String id, final String message) {
-        messages.put(id, message);
+        if (status.equals("0") && id.startsWith("desadv")) {
+            messages.put(id, message);
+            status = "->";
+        } else {
+            messages.put(id, message);
+            if (status.equals("->") || status.equals("<>")) {
+                if (id.startsWith("recadv")) {
+                    this.status = "=";  //Check waiting and QVR here
+                }
+            }
+        }
     }
 
     /**
@@ -144,7 +154,7 @@ public final class Note {
      * @throws IOException
      */
     public void addSignature(final String signature) throws IOException {
-        signatures.add(new XmlSignature(signature));
+        addSignature(new XmlSignature(signature));
     }
 
     /**
@@ -162,7 +172,7 @@ public final class Note {
      * @throws IOException
      */
     public void addSignedMessage(final String id, final String message, final String signature) throws IOException {
-        messages.put(id, message);
+        addMessage(id, message);
         addSignature(signature);
     }
 

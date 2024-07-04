@@ -59,6 +59,8 @@ public final class App {
 	private static final String channelName = "mychannel";
 	private static final String chaincodeName = "events";
 	static final String PRIVATE_PROPS_KEY = "asset_properties";
+	private static final String PRIVATE_MSG_KEY = "edifact_message";
+    private static final String PRIVATE_XMLDSIG_KEY = "message_signature";
 
 	private final Network network;
 	private final Contract contract;
@@ -215,8 +217,8 @@ public final class App {
 
 		//contract.submitTransaction("AddAdvice", assetId, advice);
 		var commit = contract.newProposal("AddAdvice")
-				.addArguments(assetId, "3")
-				.putTransient(PRIVATE_PROPS_KEY, advice)
+				.addArguments(assetId)
+				.putTransient(PRIVATE_MSG_KEY, advice)
 				.build()
 				.endorse()
 				.submitAsync();
@@ -259,7 +261,7 @@ public final class App {
 			System.out.println("\n<-- Chaincode event accepted: " + event.getEventName() + " - " + payload);
 			var status = JsonParser.parseString(payload).getAsJsonObject();
 
-			if (event.getEventName().equals("AddAdvice")) {
+			if (event.getEventName().equals("AddSignedAdvice")) {
 				if(status.get("Status").getAsString() == "2") {
 					System.out.println("Note is awaiting for response " + status.get("ID").getAsString());
 				}

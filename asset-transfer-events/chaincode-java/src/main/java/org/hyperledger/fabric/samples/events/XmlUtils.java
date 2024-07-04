@@ -41,16 +41,19 @@ public final class XmlUtils {
         return id;
     }
 
-    public static String getMessageId(final String message) {
-        String id = null;
-        Document doc;
-        try {
-            doc = loadXML(message);
-            id = getMessageId(doc);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return id;
+    public static String getMessageId(final String message) throws IOException {
+        Document doc = loadXML(message);
+        return getMessageId(doc);
+    }
+
+    public static String getDsigReference(final Document doc) {
+        return XmlUtils.loadXMLString(doc, "/Signature/SignedInfo/Reference/@URI")
+        .replace("#", "");
+    }
+
+    public static String getDsigReference(final String signature) throws IOException {
+        Document doc = XmlUtils.loadXML(signature);
+        return getDsigReference(doc);
     }
 
     public static Node loadXMLNode(final Document doc, final String xpath) {

@@ -20,15 +20,7 @@ import org.hyperledger.fabric.shim.ChaincodeStub;
 import java.util.Map;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.InvalidAlgorithmParameterException;
-import org.xml.sax.SAXException;
-import java.security.KeyException;
 import javax.xml.crypto.dsig.XMLSignatureException;
-import javax.xml.crypto.MarshalException;
-import javax.xml.parsers.ParserConfigurationException;
-import javax.xml.transform.TransformerException;
 
 /**
  * Main Chaincode class.
@@ -120,33 +112,6 @@ public final class NoteContract implements ContractInterface {
 
         Note asset = new Note(assetID, shipper, reciever);
         NoteStatus status = new NoteStatus(assetID, shipper, reciever, "empty");
-        try {
-            System.out.printf("Test XML-DSIG 1 %b\n", dsig.testXMLDsigSign());
-            System.out.printf("Test XML-DSIG 2 %b\n", dsig.testXMLDsigVerify());
-        } catch (NoSuchAlgorithmException e1) {
-            System.err.println("Algorithm is not found.");
-            e1.printStackTrace();
-        } catch (NoSuchProviderException e2) {
-            System.err.println("Provider is not found.");
-            e2.printStackTrace();
-        } catch (InvalidAlgorithmParameterException e5) {
-            e5.printStackTrace();
-        } catch (XMLSignatureException e2) {
-            System.out.println("XML Signature exception: file reading");
-            e2.printStackTrace();
-        } catch (ParserConfigurationException e1) {
-            e1.printStackTrace();
-        } catch (SAXException e3) {
-            e3.printStackTrace();
-        } catch (IOException e4) {
-            e4.printStackTrace();
-        } catch (KeyException e5) {
-            e5.printStackTrace();
-        } catch (TransformerException e5) {
-            e5.printStackTrace();
-        } catch (MarshalException e5) {
-            e5.printStackTrace();
-        }
         savePrivateData(ctx, assetID, asset);
         assetJSON = status.serialize();
         System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));
@@ -168,12 +133,11 @@ public final class NoteContract implements ContractInterface {
      *   Save any private data, if provided in transient map
      *
      * @param ctx the transaction context
-     * @param assetID asset to delete
-     * @param advice new advice for the note
+     * @param assetID asset to append data
      * @return none
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void AddAdvice(final Context ctx, final String assetID, final String message) {
+    public void AddAdvice(final Context ctx, final String assetID) {
         ChaincodeStub stub = ctx.getStub();
         String errorMessage = null;
 
@@ -186,14 +150,18 @@ public final class NoteContract implements ContractInterface {
         }
         System.out.printf("AddAdvice: verify asset %s exists\n", assetID);
         NoteStatus status = getState(ctx, assetID);
-        status.setStatus(message);
+        //status.setStatus(message);
         // Add advice
         Note privData = readPrivateData(ctx, assetID);
         String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
         if (asset != null) {
-            String id = XmlUtils.getMessageId(asset);
-            privData.addMessage(id, asset);
-            savePrivateData(ctx, assetID, privData);
+            try {
+                String id = XmlUtils.getMessageId(asset);
+                privData.addMessage(id, asset);
+                savePrivateData(ctx, assetID, privData);
+            } catch (IOException e) {
+                throw new ChaincodeException(errorMessage, AssetTransferErrors.DATA_ERROR.toString());
+            }
         }
 
         System.out.printf(" Add Advice: ID %s\n", assetID);
@@ -210,12 +178,11 @@ public final class NoteContract implements ContractInterface {
      *   Save any private data, if provided in transient map
      *
      * @param ctx the transaction context
-     * @param assetID asset to delete
-     * @param advice new advice for the note
+     * @param assetID asset to append data
      * @return none
      */
     @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void AddSignedAdvice(final Context ctx, final String assetID, final String message) {
+    public void AddSignedAdvice(final Context ctx, final String assetID) {
         ChaincodeStub stub = ctx.getStub();
         String errorMessage = null;
 
@@ -228,7 +195,7 @@ public final class NoteContract implements ContractInterface {
         }
         System.out.printf("AddSignedAdvice: verify asset %s exists\n", assetID);
         NoteStatus status = getState(ctx, assetID);
-        status.setStatus(message);
+        //status.setStatus(message);
         // Add advice
         Note privData = readPrivateData(ctx, assetID);
         String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
@@ -252,6 +219,52 @@ public final class NoteContract implements ContractInterface {
         }
     }
 
+
+    /**
+     * AddSignature adds signature
+     *   Save any private data, if provided in transient map
+     *
+     * @param ctx the transaction context
+     * @param assetID asset to append data
+     * @return none
+     */
+    @Transaction(intent = Transaction.TYPE.SUBMIT)
+    public void AddSignature(final Context ctx, final String assetID) {
+        ChaincodeStub stub = ctx.getStub();
+        String errorMessage = null;
+
+        if (assetID == null || assetID.equals("")) {
+            errorMessage = "Empty input: assetID";
+        }
+        if (errorMessage != null) {
+            System.err.println(errorMessage);
+            throw new ChaincodeException(errorMessage, AssetTransferErrors.INCOMPLETE_INPUT.toString());
+        }
+        System.out.printf("AddSignedAdvice: verify asset %s exists\n", assetID);
+        NoteStatus status = getState(ctx, assetID);
+        //status.setStatus(message);
+        // Add advice
+        Note privData = readPrivateData(ctx, assetID);
+        String signature = acceptPrivateData(ctx, PRIVATE_XMLDSIG_KEY);
+        try {
+            XmlSignature sign = new XmlSignature(signature);
+            String asset = privData.getMessages().get(sign.getReference());
+            if (dsig.verify(asset, signature)) {
+                privData.addSignature(sign);
+                savePrivateData(ctx, assetID, privData);
+                System.out.printf(" Add Signature: ID %s\n", assetID);
+                byte[] assetJSON = status.serialize();
+                stub.putState(assetID, assetJSON);
+                stub.setEvent("AddSignature", assetJSON);
+            }
+        } catch (XMLSignatureException e) {
+            System.out.printf("AddSignature: XML signature error\n");
+            e.printStackTrace();
+        } catch (IOException e) {
+            System.out.printf("AddSignature: XML reference error\n");
+            e.printStackTrace();
+        }
+    }
 
     /**
      * Deletes a asset & related details from the ledger.

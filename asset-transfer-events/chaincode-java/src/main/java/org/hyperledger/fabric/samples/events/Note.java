@@ -152,6 +152,15 @@ public final class Note {
      * @param signature the signature to set
      * @throws IOException
      */
+    public void addSignature(final XmlSignature signature) throws IOException {
+        signatures.add(signature);
+    }
+
+    /**
+     * @param id the signature id
+     * @param signature the signature to set
+     * @throws IOException
+     */
     public void addSignedMessage(final String id, final String message, final String signature) throws IOException {
         messages.put(id, message);
         addSignature(signature);

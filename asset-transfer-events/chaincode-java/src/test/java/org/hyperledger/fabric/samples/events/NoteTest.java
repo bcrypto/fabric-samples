@@ -105,6 +105,8 @@ public final class NoteTest {
             System.out.println(nt.toString());
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
+        } catch (IOException e1) {
+            e1.printStackTrace();
         }
     }
 }

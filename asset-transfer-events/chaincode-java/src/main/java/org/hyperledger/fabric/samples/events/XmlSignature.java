@@ -22,8 +22,7 @@ public final class XmlSignature {
     public XmlSignature(final String signature) throws IOException {
         this.text = signature;
         Document doc = XmlUtils.loadXML(signature);
-        this.reference = XmlUtils.loadXMLString(doc, "/Signature/SignedInfo/Reference/@URI")
-            .replace("#", "");
+        this.reference = XmlUtils.getDsigReference(doc);
     }
 
     private XmlSignature(final String signature, final String reference) {

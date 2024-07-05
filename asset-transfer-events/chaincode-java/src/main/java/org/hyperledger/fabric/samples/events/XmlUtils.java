@@ -56,6 +56,22 @@ public final class XmlUtils {
         return getDsigReference(doc);
     }
 
+    public static boolean isWaitingMode(final Document doc) {
+        Node qvr = XmlUtils.loadXMLNode(doc, "//QVR/E4221[text()=\"PN\" or text()=\"PS\"]");
+        return (qvr != null);
+    }
+
+    public static boolean hasQvr(final Document doc) {
+        Node qvr = XmlUtils.loadXMLNode(doc, "//QVR");
+        return (qvr != null);
+    }
+
+    public static boolean hasDiff(final Document doc) {
+        Node qvr = XmlUtils.loadXMLNode(doc, "//QVR/E4221[text()!=\"PN\" and text()!=\"PS\"]");
+        return (qvr != null);
+    }
+
+
     public static Node loadXMLNode(final Document doc, final String xpath) {
         Node node = null;
         try {

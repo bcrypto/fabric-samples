@@ -130,8 +130,12 @@ public final class App {
 			//prepare resources
 			ClassLoader classLoader = getClass().getClassLoader();
 			File file = new File(classLoader.getResource("recadv.xml").getFile());
+            File file1 = new File(classLoader.getResource("recadv1.xml").getFile());
+            File file2 = new File(classLoader.getResource("recadv2.xml").getFile());
             Document doc = loadXML(file);
             String str = getStringFromDocument(doc);
+			String str1 = getStringFromDocument(loadXML(file1));
+			String str2 = getStringFromDocument(loadXML(file2));
 			String items;
 			String input;
 			String prompt = "1. Exit\n2. Scan events\n3. Show channel history";
@@ -143,10 +147,20 @@ public final class App {
 					case 2:
 						assetId = scanEvents(eventSession);
 						System.out.println("Target Note " + assetId);
-						System.out.println("Press Enter to send RECADV message");
+
+						System.out.println("Select 1(No QVR), 2(QVR) variant");
+						action = in.nextInt();
+						System.out.println("Press Enter to send recadv1 message");
 						input = in.nextLine();
 						input = in.nextLine();
-						addAdvice(str);
+						if(action == 1) {
+							addAdvice(str);
+						} else {
+							addAdvice(str1);
+							System.out.println("Press Enter to send recadv2 message");
+							input = in.nextLine();
+							addAdvice(str2);
+						}
 						System.out.println("Press Enter to export Note");
 						input = in.nextLine();
 			

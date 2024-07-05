@@ -18,6 +18,7 @@ import org.hyperledger.fabric.contract.annotation.DataType;
 import org.hyperledger.fabric.contract.annotation.Property;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.w3c.dom.Document;
 
 @DataType()
 public final class Note {
@@ -135,16 +136,52 @@ public final class Note {
      * @param message the message to set
      */
     public void addMessage(final String id, final String message) {
-        if (status.equals("0") && id.startsWith("desadv")) {
-            messages.put(id, message);
-            status = "->";
+        if (id.startsWith("desadv")) {
+            if (status.equals("0")) {
+                messages.put(id, message);
+                status = "->";
+            }
         } else {
             messages.put(id, message);
-            if (status.equals("->") || status.equals("<>")) {
-                if (id.startsWith("recadv")) {
-                    this.status = "=";  //Check waiting and QVR here
+            if (id.startsWith("recadv")) {
+                try {
+                    Document msg = XmlUtils.loadXML(message);
+                    if (XmlUtils.hasQvr(msg)) {
+                        if (XmlUtils.isWaitingMode(msg)) {
+                            status = "+>";
+                        } else {
+                            status = "<>";
+                        }
+                    } else {
+                        status = "=";
+                    }
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
                 }
             }
+        }
+        checkDiff();
+    }
+
+    public void checkDiff() {
+        try {
+            boolean diff = false;
+            for (String key : messages.keySet()) {
+                if (key.startsWith("recadv")) {
+                    Document doc = XmlUtils.loadXML(messages.get(key));
+                    if (XmlUtils.hasDiff(doc)) {
+                        diff = true;
+                    }
+                }
+            }
+            if (diff && status.contains("=")) {
+                status = "<>";
+            } else if (diff && !status.contains("<>")) {
+                status = status + ",<>";
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

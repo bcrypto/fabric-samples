@@ -16,9 +16,7 @@ import java.security.spec.InvalidKeySpecException;
 
 import javax.xml.crypto.MarshalException;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
-import javax.xml.crypto.dsig.DigestMethod;
 import javax.xml.crypto.dsig.SignedInfo;
-import javax.xml.crypto.dsig.SignatureMethod;
 import javax.xml.crypto.dsig.XMLSignature;
 import javax.xml.crypto.dsig.Reference;
 import javax.xml.crypto.dsig.XMLSignatureFactory;
@@ -36,17 +34,16 @@ import org.w3c.dom.Document;
 
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
 
-import by.bcrypto.bee2j.Bee2Library;
 import by.bcrypto.bee2j.constants.XmlIdConstants;
 import by.bcrypto.bee2j.provider.Bee2SecurityProvider;
 import by.bcrypto.bee2j.provider.BignPrivateKeySpec;
 
-public final class Signer {
+public final class XmlSigner {
 
     private PrivateKey privateKey;
 	private X509Certificate certificate;
 
-    public Signer() {
+    public XmlSigner() {
         Provider dsigProvider = new XMLDSigRI();
         Security.insertProviderAt(dsigProvider, 1);
         Bee2SecurityProvider bee2j = new Bee2SecurityProvider();
@@ -55,7 +52,7 @@ public final class Signer {
 
 	public void loadPrivateKey(String path, String password) throws IOException {
         try{
-            byte[] privateKeyContainer = Signer.class.getClassLoader().getResourceAsStream(path).readAllBytes();
+            byte[] privateKeyContainer = XmlSigner.class.getClassLoader().getResourceAsStream(path).readAllBytes();
             BignPrivateKeySpec bignPrivateKeySpec = new BignPrivateKeySpec(privateKeyContainer, password);
             KeyFactory bignKeyFactory = KeyFactory.getInstance("Bign", "Bee2");
 

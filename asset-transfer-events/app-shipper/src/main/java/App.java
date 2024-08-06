@@ -49,12 +49,33 @@ public final class App {
 	private final String assetId = "asset" + Instant.now().toEpochMilli();
 	private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
  
-
+	private static Properties prop;
+	
 	public static void main(final String[] args) throws Exception {
-		var grpcChannel = Connections.newGrpcConnection();
+		String propFile = "app.properties";
+		if (args.length > 0) {
+			propFile = args[0];
+			System.out.println("Config is loaded from " + propFile);
+		} else {
+			propFile = App.class.getClassLoader().getResource("app.properties").getFile();
+		}
+		prop = new Properties();
+		try {
+			prop.load(new FileInputStream(propFile));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		System.out.println("app.properties : " + propFile);
+		prop.forEach((key, value) -> System.out.println("Key : " + key + ", Value : " + value));
+        System.out.println("tlsCertPath : " + prop.getProperty("tls.cert.path"));
+        
+	
+		var grpcChannel = Connections.newGrpcConnection(prop);
 		var builder = Gateway.newInstance()
-				.identity(Connections.newIdentity())
-				.signer(Connections.newSigner())
+				.identity(Connections.newIdentity(prop))
+				.signer(Connections.newSigner(prop))
 				.connection(grpcChannel)
 				.evaluateOptions(options -> options.withDeadlineAfter(5, TimeUnit.SECONDS))
 				.endorseOptions(options -> options.withDeadlineAfter(15, TimeUnit.SECONDS))
@@ -75,7 +96,8 @@ public final class App {
 
 	public void run() throws IOException, XMLSignatureException, EndorseException, SubmitException, CommitStatusException, CommitException {
 		
-		Signer signer = new Signer();
+		
+		XmlSigner signer = new XmlSigner();
 		signer.loadCertificate(FnpCertificatePath);
 		signer.loadPrivateKey(FnpPrivateKeyPath, FnpPassword);
 

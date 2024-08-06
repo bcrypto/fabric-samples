@@ -19,53 +19,38 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.cert.CertificateException;
+import java.util.Properties;
 
 public final class Connections {
-    // Path to crypto materials.
-    private static final Path cryptoPath = Paths.get("..", "..", "test-network", "organizations", "peerOrganizations",	"org1.example.com");
-    // Path to user certificate.
-    private static final Path certPath = cryptoPath.resolve(Paths.get("users", "User1@org1.example.com", "msp", "signcerts", "cert.pem"));
-    // Path to user private key directory.
-    private static final Path keyDirPath = cryptoPath.resolve(Paths.get("users", "User1@org1.example.com", "msp", "keystore"));
-    // Path to peer tls certificate.
-    private static final Path tlsCertPath = cryptoPath.resolve(Paths.get("peers", "peer0.org1.example.com", "tls", "ca.crt"));
-
-    // Gateway peer end point.
-    private static final String peerEndpoint = "localhost:7051";
-    private static final String overrideAuth = "peer0.org1.example.com";
-
-    private static final String mspID = "Org1MSP";
 
     private Connections() {
         // Private constructor to prevent instantiation
     }
 
-    public static ManagedChannel newGrpcConnection() throws IOException {
+    public static ManagedChannel newGrpcConnection(Properties prop) throws IOException {
+        Path tlsCertPath = Paths.get(prop.getProperty("tls.cert.path"));
+        String overrideAuth = prop.getProperty("gateway.auth");
         var credentials = TlsChannelCredentials.newBuilder()
                 .trustManager(tlsCertPath.toFile())
                 .build();
-        return Grpc.newChannelBuilder(peerEndpoint, credentials)
+        return Grpc.newChannelBuilder(prop.getProperty("gateway.peer"), credentials)
                 .overrideAuthority(overrideAuth)
                 .build();
     }
 
-    public static Identity newIdentity() throws IOException, CertificateException {
+    public static Identity newIdentity(Properties prop) throws IOException, CertificateException {
+        Path certPath = Paths.get(prop.getProperty("cert.path"));
         var certReader = Files.newBufferedReader(certPath);
         var certificate = Identities.readX509Certificate(certReader);
-
-        return new X509Identity(mspID, certificate);
+        
+        return new X509Identity(prop.getProperty("gateway.msp"), certificate);
     }
 
-    public static Signer newSigner() throws IOException, InvalidKeyException {
-        var keyReader = Files.newBufferedReader(getPrivateKeyPath());
+    public static Signer newSigner(Properties prop) throws IOException, InvalidKeyException {
+        var path = Paths.get(prop.getProperty("key.path"));
+        var keyReader = Files.newBufferedReader(path);
         var privateKey = Identities.readPrivateKey(keyReader);
 
         return Signers.newPrivateKeySigner(privateKey);
-    }
-
-    private static Path getPrivateKeyPath() throws IOException {
-        try (var keyFiles = Files.list(keyDirPath)) {
-            return keyFiles.findFirst().orElseThrow();
-        }
     }
 }

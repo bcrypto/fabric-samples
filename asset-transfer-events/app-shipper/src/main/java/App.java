@@ -9,7 +9,6 @@ import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import java.nio.file.Paths;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.w3c.dom.Document;
@@ -40,9 +39,6 @@ public final class App {
 	private static final String chaincodeName = "events";
 	private static final String PRIVATE_MSG_KEY = "edifact_message";
     private static final String PRIVATE_XMLDSIG_KEY = "message_signature";
-	private static final String FnpPrivateKeyPath = Paths.get("privkey.der").toString();
-	private static final String FnpCertificatePath = Paths.get("cert.der").toString();
-	private static final String FnpPassword = "fnpfnpfnp";
 
 	private final Network network;
 	private final Contract contract;
@@ -98,8 +94,8 @@ public final class App {
 		
 		
 		XmlSigner signer = new XmlSigner();
-		signer.loadCertificate(FnpCertificatePath);
-		signer.loadPrivateKey(FnpPrivateKeyPath, FnpPassword);
+		signer.loadCertificate(prop.getProperty("bign.cert.path"));
+		signer.loadPrivateKey(prop.getProperty("bign.key.path"), prop.getProperty("bign.key.pwd"));
 
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {

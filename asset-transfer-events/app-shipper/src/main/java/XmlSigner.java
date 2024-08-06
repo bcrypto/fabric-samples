@@ -1,5 +1,8 @@
-import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.IOException;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Collections;
 
 import java.security.KeyFactory;
@@ -51,8 +54,9 @@ public final class XmlSigner {
     }
 
 	public void loadPrivateKey(String path, String password) throws IOException {
+        InputStream fs = Files.newInputStream(Paths.get(path));
         try{
-            byte[] privateKeyContainer = XmlSigner.class.getClassLoader().getResourceAsStream(path).readAllBytes();
+            byte[] privateKeyContainer = fs.readAllBytes();
             BignPrivateKeySpec bignPrivateKeySpec = new BignPrivateKeySpec(privateKeyContainer, password);
             KeyFactory bignKeyFactory = KeyFactory.getInstance("Bign", "Bee2");
 
@@ -63,21 +67,25 @@ public final class XmlSigner {
             throw new IOException(e);
         } catch (InvalidKeySpecException e) {
             throw new IOException(e);
+        } catch (NoSuchFileException e) {
+            throw new IOException(e);
+        } finally {
+            fs.close();
         }
 	}
 	
 	public void loadCertificate(String path) throws IOException {
+        InputStream fs = Files.newInputStream(Paths.get(path));
         try {
-            byte[] certificate = App.class.getClassLoader().getResourceAsStream(path).readAllBytes();
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509", "Bee2");
-            ByteArrayInputStream is = new ByteArrayInputStream(certificate);
-
-            this.certificate = (X509Certificate) certificateFactory.generateCertificate(is);
+            this.certificate = (X509Certificate) certificateFactory.generateCertificate(fs);
         } catch (CertificateException e) {
             throw new IOException(e);
         } catch (NoSuchProviderException e) {
             throw new IOException(e);
-        } 
+        } finally {
+            fs.close();
+        }
 	}
 
 	public String signDocument(final Document doc, final String reference) throws XMLSignatureException {

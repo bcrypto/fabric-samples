@@ -68,12 +68,13 @@ public final class App {
 
 	public void run() throws IOException, XMLSignatureException, EndorseException, SubmitException, CommitStatusException, CommitException {
 		
-		//menu.show();
-		menu.start();
-/*		XmlSigner signer = new XmlSigner();
+		XmlSigner signer = new XmlSigner();
 		signer.loadCertificate(prop.getProperty("bign.cert.path"));
 		signer.loadPrivateKey(prop.getProperty("bign.key.path"), prop.getProperty("bign.key.pwd"));
-
+		client.setXmlSigner(signer);
+		//menu.show();
+		menu.start();
+/*
 		// Listen for events emitted by subsequent transactions, stopping when the try-with-resources block exits
 		try (var eventSession = startChaincodeEventListening()) {
 			// Prepare resources

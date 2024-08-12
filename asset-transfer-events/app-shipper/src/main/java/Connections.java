@@ -47,7 +47,19 @@ public final class Connections {
     }
 
     public static Signer newSigner(Properties prop) throws IOException, InvalidKeyException {
-        var path = Paths.get(prop.getProperty("key.path"));
+        Path path;
+        String value = prop.getProperty("key.path");
+        if (value != null) {
+            path = Paths.get(value);
+        } else {
+            // Test network generate new key name each time, so
+            // we need to use key.dir setting
+            value = prop.getProperty("key.dir");
+            var keyDirPath = Paths.get(value);
+            try (var keyFiles = Files.list(keyDirPath)) {
+                path = keyFiles.findFirst().orElseThrow();
+            }
+        }
         var keyReader = Files.newBufferedReader(path);
         var privateKey = Identities.readPrivateKey(keyReader);
 

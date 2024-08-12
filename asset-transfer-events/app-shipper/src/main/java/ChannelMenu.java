@@ -1,10 +1,6 @@
 import java.time.Instant;
 import java.util.Scanner;
 
-import org.hyperledger.fabric.client.CommitStatusException;
-import org.hyperledger.fabric.client.EndorseException;
-import org.hyperledger.fabric.client.SubmitException;
-
 public class ChannelMenu {
     private  String noteId;
     private final Client client;
@@ -26,12 +22,17 @@ public class ChannelMenu {
         }
         System.out.println("Start working with " + noteId);
         menu = new NoteMenu(client, noteId);
-        while(menu.start() > 1) {
-            int action = show();
+        int action;
+        do {
+            action = menu.start();
             if (action == 1) {
                 return 1;
             }
-        }
+            action = show();
+            if (action == 1) {
+                return 1;
+            }
+        } while (action != 0);
         return 0;
     }
 
@@ -42,18 +43,16 @@ public class ChannelMenu {
 
         try {
             long blockNumber = client.createNote(assetId);
-
+            System.out.println("\n*** CreateNote committed successfully");
             System.out.println("\n***Added to block " + blockNumber);
-        } catch (SubmitException | EndorseException | CommitStatusException e) {
-            // TODO Auto-generated catch block
+        } catch (RuntimeException e) {
             e.printStackTrace();
-            //throw new RuntimeException(e);
         }
         return assetId;
     }
 
     public int show() {
-        String prompt = "0. Back to menu\n1. Exit\n2. Add note\n3. Show note list";
+        String prompt = "0. Back to menu\n1. Exit\n2. Add note\n3. Show note list\n4. Show channel events";
         System.out.println(prompt);
         @SuppressWarnings("resource")
         Scanner in = new Scanner(System.in);
@@ -70,6 +69,9 @@ public class ChannelMenu {
                 case 3:
                     //chooseNote(in);
                     break;
+                case 4:
+                    showEvents();
+                    break;
                 default:
                     break;
             }
@@ -77,5 +79,9 @@ public class ChannelMenu {
             action = in.nextInt();
         }
         return action;
+    }
+
+    private void showEvents() {
+        client.replayChaincodeEvents(0);
     }
 }

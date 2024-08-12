@@ -1,5 +1,8 @@
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
+
+import javax.xml.crypto.dsig.XMLSignatureException;
+
 import java.util.List;
 import java.util.Properties;
 
@@ -12,8 +15,11 @@ import org.hyperledger.fabric.client.EndorseException;
 import org.hyperledger.fabric.client.Gateway;
 import org.hyperledger.fabric.client.GatewayException;
 import org.hyperledger.fabric.client.Network;
+import org.hyperledger.fabric.client.Status;
 import org.hyperledger.fabric.client.SubmitException;
+import org.hyperledger.fabric.client.SubmittedTransaction;
 import org.hyperledger.fabric.protos.peer.ChannelQueryResponse;
+import org.w3c.dom.Document;
 import org.hyperledger.fabric.protos.peer.ChannelInfo;
 
 import com.google.gson.Gson;
@@ -34,12 +40,16 @@ public class Client {
     private final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final Gateway gateway;
     private String channelName = "mychannel";
+	private CloseableIterator<ChaincodeEvent> eventSession;
     private Properties prop;
+	private XmlSigner signer;
 
     public Client(final Gateway gateway, final Properties prop) {
 		this.gateway = gateway;
         network = gateway.getNetwork(channelName);
+		eventSession = startChaincodeEventListening();
 		contract = network.getContract(chaincodeName);
+		this.prop = prop;
 	}
 
     public Properties getProperties() {
@@ -62,6 +72,8 @@ public class Client {
         channelName = channel;
         network = gateway.getNetwork(channelName);
 		contract = network.getContract(chaincodeName);
+		eventSession.close();
+		eventSession = startChaincodeEventListening();
     }
 
     public List<ChannelInfo> getChannelList() {
@@ -78,6 +90,10 @@ public class Client {
         }
         return null;
     }
+
+	public void setXmlSigner(XmlSigner signer) {
+		this.signer = signer;
+	}
     
 	private CloseableIterator<ChaincodeEvent> startChaincodeEventListening() {
 		//System.out.println("\n*** Start chaincode event listening");
@@ -103,22 +119,22 @@ public class Client {
 		return gson.toJson(parsedJson);
 	}
 
-	public long createNote(String assetId) throws EndorseException, SubmitException, CommitStatusException {
-		System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
-
-		var commit = contract.newProposal("CreateNote")
-				.addArguments(assetId, "10", "100")
-				.build()
-				.endorse()
-				.submitAsync();
-
-		var status = commit.getStatus();
+	public long createNote(String assetId) {
+		Status status;
+		SubmittedTransaction commit;
+		try {
+			commit = contract.newProposal("CreateNote")
+					.addArguments(assetId, "10", "100")		// TODO: get actual values
+					.build()
+					.endorse()
+					.submitAsync();
+			status = commit.getStatus();
+		} catch (SubmitException | EndorseException | CommitStatusException e) {
+			throw new RuntimeException(e);
+		}
 		if (!status.isSuccessful()) {
 			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
 		}
-
-		System.out.println("\n*** CreateNote committed successfully");
-
 		return status.getBlockNumber();
 	}
 
@@ -159,29 +175,44 @@ public class Client {
 		System.out.println("\n*** AddSignedAdvice committed successfully");
 	}
 
-	private String getAsset(String assetId) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+	public void addMessage(String assetId, Document doc) {
+		try{
+			String str = XmlUtils.getStringFromDocument(doc);
+			if (signer == null) {
+				addAdvice(assetId, str);
+			} else {
+				String signature = signer.signDocument(doc, "#desadv1");
+				addSignedAdvice(assetId, str, signature);
+			}	
+		} catch (EndorseException | SubmitException | CommitStatusException | CommitException | XMLSignatureException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public String getAsset(String assetId) {
 		byte[] result = null;
 		System.out.println("\n--> Evaluate transaction: ExportNote, " + assetId);
 		try {
 			result = contract.evaluateTransaction("ExportNote", assetId);
 			System.out.println("\n*** ExportNote evaluated successfully");
-		} catch (GatewayException e1) {
+		} catch (GatewayException e) {
 			System.out.println("\n*** ExportNote wasn't evaluated");
-			e1.printStackTrace();
+			e.printStackTrace();
+			throw new RuntimeException(e);
 		}
 		
 		return new String(result, UTF_8);
 	}
 
-	private void deleteAsset(String assetId) throws EndorseException, SubmitException, CommitStatusException, CommitException {
-		System.out.println("\n--> Submit transaction: DeleteNote, " + assetId);
+	// private void deleteAsset(String assetId) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+	// 	System.out.println("\n--> Submit transaction: DeleteNote, " + assetId);
 
-		contract.submitTransaction("DeleteNote", assetId);
+	// 	contract.submitTransaction("DeleteNote", assetId);
 
-		System.out.println("\n*** DeleteNote committed successfully");
-	}
+	// 	System.out.println("\n*** DeleteNote committed successfully");
+	// }
 
-	private void replayChaincodeEvents(final long startBlock) {
+	public void replayChaincodeEvents(final long startBlock) {
 		System.out.println("\n*** Start chaincode event replay");
 
 		var request = network.newChaincodeEventsRequest(chaincodeName)

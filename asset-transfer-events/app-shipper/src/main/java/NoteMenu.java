@@ -2,6 +2,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Scanner;
 
 import org.w3c.dom.Document;
@@ -39,7 +40,8 @@ public class NoteMenu {
     }
 
     public int show() {
-        String prompt = "0. Back to menu\n1. Exit\n2. Add message\n3. Export message";
+        String prompt = "0. Back to menu\n1. Exit\n2. Add message\n3. Export note\n" 
+            +"4. Sign message\n5. List messages";
         System.out.println(prompt);
         @SuppressWarnings("resource")
         Scanner in = new Scanner(System.in);
@@ -55,6 +57,12 @@ public class NoteMenu {
                     break;
                 case 3:
                     exportNote();
+                    break;
+                case 4:
+                    signMsg();
+                    break;
+                case 5:
+                    listMsg();
                     break;
                 default:
                     break;
@@ -102,4 +110,31 @@ public class NoteMenu {
         }
     }
 
+    private void signMsg() {
+        String reference = client.getProperties().getProperty("msg.ref");
+        if (reference == null) {
+            System.out.println("Enter message id:");
+            @SuppressWarnings("resource")
+            Scanner in = new Scanner(System.in);
+            reference = in.nextLine();
+        }
+        try {
+            client.addSignature(noteId, reference);
+        } catch (RuntimeException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void listMsg() {
+        try {
+            String delnote = client.getAsset(noteId);
+            Document doc = XmlUtils.loadXML(delnote);
+            ArrayList<String> messages = XmlUtils.getMessageList(doc);
+            for (int i = 0; i < messages.size(); i++) {
+                System.out.println(i + ". " + messages.get(i));
+            }
+        } catch (RuntimeException | IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

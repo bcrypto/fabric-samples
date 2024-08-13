@@ -34,7 +34,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
-
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Element;
 import org.apache.jcp.xml.dsig.internal.dom.XMLDSigRI;
 
 import by.bcrypto.bee2j.constants.XmlIdConstants;
@@ -61,13 +63,8 @@ public final class XmlSigner {
             KeyFactory bignKeyFactory = KeyFactory.getInstance("Bign", "Bee2");
 
             this.privateKey = bignKeyFactory.generatePrivate(bignPrivateKeySpec);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException(e);
-        } catch (NoSuchProviderException e) {
-            throw new IOException(e);
-        } catch (InvalidKeySpecException e) {
-            throw new IOException(e);
-        } catch (NoSuchFileException e) {
+        } catch (NoSuchAlgorithmException | NoSuchProviderException | 
+            InvalidKeySpecException | NoSuchFileException e) {
             throw new IOException(e);
         } finally {
             fs.close();
@@ -79,16 +76,14 @@ public final class XmlSigner {
         try {
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509", "Bee2");
             this.certificate = (X509Certificate) certificateFactory.generateCertificate(fs);
-        } catch (CertificateException e) {
-            throw new IOException(e);
-        } catch (NoSuchProviderException e) {
+        } catch (CertificateException | NoSuchProviderException e) {
             throw new IOException(e);
         } finally {
             fs.close();
         }
 	}
 
-	public String signDocument(final Document doc, final String reference) throws XMLSignatureException {
+	public String signDocument(final Document doc, final String reference, int level) throws XMLSignatureException {
         XMLSignatureFactory fac = XMLSignatureFactory.getInstance("DOM");
         SignedInfo si;
         try { 
@@ -122,8 +117,27 @@ public final class XmlSigner {
 
         DOMSignContext dsc = new DOMSignContext(this.privateKey, newDoc);
         dsc.setProperty("javax.xml.crypto.dsig.cacheReference", true);
-        dsc.setIdAttributeNS(doc.getDocumentElement(), null, "id");
-
+        switch (level) {
+            case 1:
+                dsc.setIdAttributeNS(doc.getDocumentElement(), null, "id");
+                break;
+            case 2:
+                NodeList children = doc.getDocumentElement().getChildNodes();
+                for (int i = 0; i < children.getLength(); i++) {
+                    Node node = children.item(i);
+                    if (node.getNodeType() == Node.ELEMENT_NODE) {
+                        Element elem = (Element) node;
+                        if (!elem.getAttribute("id").isEmpty()) {
+                            String idValue = elem.getAttributeNS(null, "id");
+                            System.out.println("idValue : " + idValue);
+                            dsc.setIdAttributeNS(elem, null, "id");
+                        }
+                    }
+                }
+                break;       
+            default:
+                return null;
+        }
         XMLSignature signature = fac.newXMLSignature(si, ki);
         try {
             signature.sign(dsc);

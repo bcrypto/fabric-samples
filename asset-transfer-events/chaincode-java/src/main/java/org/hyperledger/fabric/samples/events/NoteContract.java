@@ -16,7 +16,13 @@ import org.hyperledger.fabric.contract.annotation.License;
 import org.hyperledger.fabric.contract.annotation.Transaction;
 import org.hyperledger.fabric.shim.ChaincodeException;
 import org.hyperledger.fabric.shim.ChaincodeStub;
+import org.hyperledger.fabric.shim.ledger.KeyValue;
+import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+import org.json.JSONObject;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import java.io.IOException;
@@ -240,7 +246,7 @@ public final class NoteContract implements ContractInterface {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.INCOMPLETE_INPUT.toString());
         }
-        System.out.printf("AddSignedAdvice: verify asset %s exists\n", assetID);
+        System.out.printf("AddSignature: verify asset %s exists\n", assetID);
         NoteStatus status = getState(ctx, assetID);
         //status.setStatus(message);
         // Add advice
@@ -387,6 +393,42 @@ public final class NoteContract implements ContractInterface {
             account.getTTNCount() + t,
             account.getTNCount() + 1 - t);
         ctx.getStub().putPrivateData(collection, shipper, newValue.serialize());
+    }
+
+    /**
+     * Retrieves all assets from the ledger.
+     *
+     * @param ctx the transaction context
+     * @return array of assets found on the ledger
+     */
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String GetNoteList(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+
+        List<String> queryResults = new ArrayList<String>();
+
+        // To retrieve all assets from the ledger use getStateByRange with empty startKey & endKey.
+        // Giving empty startKey & endKey is interpreted as all the keys from beginning to end.
+        // As another example, if you use startKey = 'asset0', endKey = 'asset9' ,
+        // then getStateByRange will retrieve asset with keys between asset0 (inclusive) and asset9 (exclusive) in lexical order.
+        QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+        for (KeyValue result: results) {
+            queryResults.add(result.getKey());
+        }
+        final String response = String.join(" ", queryResults);
+        return response;
+    }
+
+    @Transaction(intent = Transaction.TYPE.EVALUATE)
+    public String GetNotes(final Context ctx) {
+        ChaincodeStub stub = ctx.getStub();
+        QueryResultsIterator<KeyValue> results = stub.getStateByRange("", "");
+        Map<String, Object> tMap = new HashMap<String, Object>();
+        for (KeyValue result: results) {
+            tMap.put(result.getKey(), result.getStringValue());
+        }
+        final String response = new JSONObject(tMap).toString();
+        return response;
     }
 
     private enum AssetTransferErrors {

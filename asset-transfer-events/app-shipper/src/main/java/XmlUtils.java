@@ -1,9 +1,14 @@
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+import org.xml.sax.InputSource;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.io.StringReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -74,6 +79,20 @@ public final class XmlUtils {
         return doc;
     }
 
+    public static Document loadXML(final String str) throws IOException {
+        Document doc = null;
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = dbf.newDocumentBuilder();
+            doc = builder.parse(new InputSource(new StringReader(str)));
+        } catch (ParserConfigurationException e) {
+            throw new IOException(e);
+        } catch (SAXException e) {
+            throw new IOException(e);
+        }
+        return doc;
+    }
+
     public static String loadXMLNode(final Document doc, final String xpath) {
         Node node = null;
         try {
@@ -84,5 +103,28 @@ public final class XmlUtils {
             e5.printStackTrace();
         }
         return nodeToString(node);
+    }
+
+    public static String getMessageId(final Document doc) {
+        String id = null;
+        Node root = doc.getDocumentElement();
+        id = root.getAttributes().getNamedItem("id").getNodeValue();
+        return id;
+    }
+
+    public static ArrayList<String> getMessageList(final Document doc) {
+        var messages = new ArrayList<String>();
+        NodeList children = doc.getDocumentElement().getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node node = children.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE) {
+                Element elem = (Element) node;
+                if (!elem.getAttribute("id").isEmpty()) {
+                    String idValue = elem.getAttribute("id");
+                    messages.add(idValue);
+                }
+            }
+        }
+        return messages;
     }
 }

@@ -1,4 +1,6 @@
 import java.time.Instant;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 
 public class ChannelMenu {
@@ -51,8 +53,9 @@ public class ChannelMenu {
         return assetId;
     }
 
+    @SuppressWarnings("resource")
     public int show() {
-        String prompt = "0. Back to menu\n1. Exit\n2. Add note\n3. Show note list\n4. Show channel events";
+        String prompt = "0. Back to menu\n1. Exit\n2. Add note\n3. Show note list\n4. Select note\n5. Show channel events";
         System.out.println(prompt);
         @SuppressWarnings("resource")
         Scanner in = new Scanner(System.in);
@@ -67,9 +70,12 @@ public class ChannelMenu {
                     noteId = addNewNote();
                     return 2;
                 case 3:
-                    //chooseNote(in);
+                    listNote();
                     break;
                 case 4:
+                    chooseNote(in);
+                    return 2;
+                case 5:
                     showEvents();
                     break;
                 default:
@@ -83,5 +89,31 @@ public class ChannelMenu {
 
     private void showEvents() {
         client.replayChaincodeEvents(0);
+    }
+
+    private void listNote() {
+        Map<String, Object> notes = client.getNotes();
+        for (Entry<String, Object> note : notes.entrySet()) {
+            System.out.println(note.getKey());
+            System.out.println(note.getValue());
+        }
+    }
+
+    private void chooseNote(Scanner in) {
+        var notes =  client.getNoteList();
+        System.out.println("Select note:");
+        for (int i=0; i < notes.length; i++) {
+            System.out.println(i + 1 + ". " + notes[i]);
+        }
+        int choice = in.nextInt();
+        if (choice > 0 && choice <= notes.length) {
+            String name = notes[choice - 1];
+            if (name.equals(noteId)) {
+                System.out.println("Note " + name + " is already selected");
+            } else {
+                noteId = name;
+                System.out.println("Note " + name + " is selected");
+            }
+        }
     }
 }

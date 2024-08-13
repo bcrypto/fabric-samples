@@ -124,7 +124,7 @@ public final class XmlDsig {
                         }
                     }
                     // make sure algorithm is compatible with method
-                    if (algEquals(sm.getAlgorithm(), pk.getAlgorithm())) {
+                    if ((pk != null) && algEquals(sm.getAlgorithm(), pk.getAlgorithm())) {
                         return new SimpleKeySelectorResult(pk);
                     }
                 }

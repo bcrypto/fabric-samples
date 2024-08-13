@@ -4,6 +4,7 @@ import java.util.concurrent.CompletableFuture;
 import javax.xml.crypto.dsig.XMLSignatureException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.hyperledger.fabric.client.ChaincodeEvent;
@@ -20,6 +21,7 @@ import org.hyperledger.fabric.client.SubmitException;
 import org.hyperledger.fabric.client.SubmittedTransaction;
 import org.hyperledger.fabric.protos.peer.ChannelQueryResponse;
 import org.w3c.dom.Document;
+import org.json.JSONObject;
 import org.hyperledger.fabric.protos.peer.ChannelInfo;
 
 import com.google.gson.Gson;
@@ -28,6 +30,8 @@ import com.google.gson.JsonParser;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+
+import java.io.IOException;
 
 public class Client {
 
@@ -175,16 +179,50 @@ public class Client {
 		System.out.println("\n*** AddSignedAdvice committed successfully");
 	}
 
+	private void addMsgSignature(String assetId, String signature) throws EndorseException, SubmitException, CommitStatusException, CommitException {
+		System.out.println("\n--> Submit transaction: AddSignature for " + assetId);
+
+		var commit = contract.newProposal("AddSignature")
+				.addArguments(assetId)
+				.putTransient(PRIVATE_XMLDSIG_KEY, signature)
+				.build()
+				.endorse()
+				.submitAsync();
+
+		var status = commit.getStatus();
+		if (!status.isSuccessful()) {
+			throw new RuntimeException("failed to commit transaction with status code " + status.getCode());
+		}
+
+		System.out.println("\n*** AddSignature committed successfully");
+	}
+
+
 	public void addMessage(String assetId, Document doc) {
 		try{
 			String str = XmlUtils.getStringFromDocument(doc);
 			if (signer == null) {
 				addAdvice(assetId, str);
 			} else {
-				String signature = signer.signDocument(doc, "#desadv1");
+				String reference = "#" + XmlUtils.getMessageId(doc);
+				System.out.println("Signature reference: " + reference);
+				String signature = signer.signDocument(doc, reference, 1);
 				addSignedAdvice(assetId, str, signature);
 			}	
 		} catch (EndorseException | SubmitException | CommitStatusException | CommitException | XMLSignatureException e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public void addSignature(String assetId, String reference) {
+		try{
+			String str = getAsset(assetId);
+			if (signer != null) {
+				Document doc = XmlUtils.loadXML(str);
+				String signature = signer.signDocument(doc, "#" + reference, 2);
+				addMsgSignature(assetId, signature);
+			}	
+		} catch (EndorseException | SubmitException | CommitStatusException | CommitException | XMLSignatureException | IOException e) {
 			throw new RuntimeException(e);
 		}
 	}
@@ -204,6 +242,38 @@ public class Client {
 		return new String(result, UTF_8);
 	}
 
+	public String[] getNoteList() {
+	 	System.out.println("\n--> Submit transaction: GetNoteList");
+		String result = null;
+		try {
+			byte[] list = contract.evaluateTransaction("GetNoteList");
+			result = new String(list, UTF_8); 
+			System.out.println("\n*** GetNoteList evaluated successfully");
+		} catch (GatewayException e) {
+			System.out.println("\n*** GetNoteList wasn't evaluated");
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		return result.split(" ");
+	}
+
+	public Map<String, Object> getNotes() {
+		System.out.println("\n--> Submit transaction: GetNotes");
+		Map<String, Object> obj;
+		String result = null;
+		try {
+			byte[] list = contract.evaluateTransaction("GetNotes");
+			result = new String(list, UTF_8); 
+			JSONObject json = new JSONObject(result);
+        	obj = json.toMap();
+			System.out.println("\n*** GetNotes evaluated successfully");
+		} catch (GatewayException e) {
+			System.out.println("\n*** GetNotes wasn't evaluated");
+			e.printStackTrace();
+			throw new RuntimeException(e);
+		}
+		return obj;
+   }
 	// private void deleteAsset(String assetId) throws EndorseException, SubmitException, CommitStatusException, CommitException {
 	// 	System.out.println("\n--> Submit transaction: DeleteNote, " + assetId);
 

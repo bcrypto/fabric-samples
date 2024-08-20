@@ -35,6 +35,12 @@ public final class App {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		for (int i = 1; i < args.length; i++) {
+			if(args[i].contains("=")) {
+				String[] vals = args[i].split("=");
+				prop.setProperty(vals[0], vals[1]);
+			}
+		}
 		System.out.println("app.properties : " + propFile);
 		prop.forEach((key, value) -> System.out.println("Key : " + key + ", Value : " + value));
 	

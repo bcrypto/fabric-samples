@@ -45,3 +45,5 @@ test-network/organizations/fabric-ca/operator/msp/keystore/
 test-network/organizations/fabric-ca/operator/*.pem
 test-network/organizations/fabric-ca/operator/*.db
 test-network/organizations/fabric-ca/operator/*Key
+
+network/

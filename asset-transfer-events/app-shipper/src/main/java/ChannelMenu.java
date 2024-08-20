@@ -92,8 +92,8 @@ public class ChannelMenu {
     }
 
     private void listNote() {
-        Map<String, Object> notes = client.getNotes();
-        for (Entry<String, Object> note : notes.entrySet()) {
+        Map<String, String> notes = client.getNotes();
+        for (Entry<String, String> note : notes.entrySet()) {
             System.out.println(note.getKey());
             System.out.println(note.getValue());
         }

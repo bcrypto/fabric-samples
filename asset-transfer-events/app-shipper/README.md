@@ -8,9 +8,20 @@ test-network$ ./network.sh up createChannel -c mychannel -ca -s couchdb
 test-network$ ./network.sh deployCC -ccn events -ccp ../asset-transfer-events/chaincode-java/ -cccg ../asset-transfer-events/chaincode-java/collections_config.json -ccl java -ccep "OR('Org1MSP.peer','Org2MSP.peer')"
 ```
 
-# Start shipper app
+# Start app
+## Start shipper app
 ```
 asset-transfer-events/app-shipper$ ./gradlew run
+```
+
+## Start reciever app
+```
+asset-transfer-events/app-shipper$ ./gradlew run --args './settings/rec.properties'
+```
+
+## Start app with overriding properties
+```
+asset-transfer-events/app-shipper$ ./gradlew run --args './settings/rec.properties msg.input=msg/recadv1.xml'
 ```
 
 # Stop test network

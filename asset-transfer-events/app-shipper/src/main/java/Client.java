@@ -21,17 +21,18 @@ import org.hyperledger.fabric.client.SubmitException;
 import org.hyperledger.fabric.client.SubmittedTransaction;
 import org.hyperledger.fabric.protos.peer.ChannelQueryResponse;
 import org.w3c.dom.Document;
-import org.json.JSONObject;
 import org.hyperledger.fabric.protos.peer.ChannelInfo;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 
 public class Client {
 
@@ -257,15 +258,15 @@ public class Client {
 		return result.split(" ");
 	}
 
-	public Map<String, Object> getNotes() {
+	public Map<String, String> getNotes() {
 		System.out.println("\n--> Submit transaction: GetNotes");
-		Map<String, Object> obj;
+		Map<String, String> obj;
 		String result = null;
 		try {
 			byte[] list = contract.evaluateTransaction("GetNotes");
 			result = new String(list, UTF_8); 
-			JSONObject json = new JSONObject(result);
-        	obj = json.toMap();
+			Type type = new TypeToken<Map<String, String>>(){}.getType();
+			obj = gson.fromJson(result, type);
 			System.out.println("\n*** GetNotes evaluated successfully");
 		} catch (GatewayException e) {
 			System.out.println("\n*** GetNotes wasn't evaluated");

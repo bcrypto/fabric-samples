@@ -235,7 +235,7 @@ public final class Note {
     public String export() {
         String result = "<DELNOTE>\n"
             + String.join("\n", messages.values()) + "\n"
-            + signatures.stream().map(x -> x.getText()).reduce("\n", (x, y) -> String.join(x, y))
+            + signatures.stream().map(x -> x.getText()).reduce("\n", (x, y) -> x + y)
             + "</DELNOTE>";
         return result;
     }

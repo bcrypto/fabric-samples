@@ -13,18 +13,21 @@ public class ChannelMenu {
     }
 
     public int start () {
+        int action;
         String name = client.getProperties().getProperty("channel.action");
+        String note = client.getProperties().getProperty("note.name");
         if (name != null && name == "add") {
             noteId = addNewNote();
+        } else if (note != null) {
+            noteId = note;
         } else {
-            int action = show();
+            action = show();
             if((action == 0) || (action == 1)) {
                 return action;
             }
         }
         System.out.println("Start working with " + noteId);
         menu = new NoteMenu(client, noteId);
-        int action;
         do {
             action = menu.start();
             if (action == 1) {

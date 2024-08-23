@@ -26,6 +26,9 @@ public class NoteMenu {
                 case "export":
                     exportNote();
                     break;
+                case "sign":
+                    signMsg();
+                    break;
                 default:
                     break;
             }

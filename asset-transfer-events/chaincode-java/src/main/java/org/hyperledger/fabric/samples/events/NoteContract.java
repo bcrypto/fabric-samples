@@ -117,7 +117,7 @@ public final class NoteContract implements ContractInterface {
         }
 
         Note asset = new Note(assetID, shipper, reciever);
-        NoteStatus status = new NoteStatus(assetID, shipper, reciever, "empty");
+        NoteStatus status = new NoteStatus(assetID, shipper, reciever, "()");
         savePrivateData(ctx, assetID, asset);
         assetJSON = status.serialize();
         System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));
@@ -156,7 +156,6 @@ public final class NoteContract implements ContractInterface {
         }
         System.out.printf("AddAdvice: verify asset %s exists\n", assetID);
         NoteStatus status = getState(ctx, assetID);
-        //status.setStatus(message);
         // Add advice
         Note privData = readPrivateData(ctx, assetID);
         String asset = acceptPrivateData(ctx, PRIVATE_MSG_KEY);
@@ -165,13 +164,13 @@ public final class NoteContract implements ContractInterface {
                 String id = XmlUtils.getMessageId(asset);
                 privData.addMessage(id, asset);
                 savePrivateData(ctx, assetID, privData);
+                status.setStatus(privData.getStatus());
             } catch (IOException e) {
                 throw new ChaincodeException(errorMessage, AssetTransferErrors.DATA_ERROR.toString());
             }
         }
 
         System.out.printf(" Add Advice: ID %s\n", assetID);
-        //savePrivateData(ctx, assetID); // save private data if any
         byte[] assetJSON = status.serialize();
 
         stub.putState(assetID, assetJSON);
@@ -211,6 +210,7 @@ public final class NoteContract implements ContractInterface {
                 String id = XmlUtils.getMessageId(asset);
                 privData.addSignedMessage(id, asset, signature);
                 savePrivateData(ctx, assetID, privData);
+                status.setStatus(privData.getStatus());
                 System.out.printf(" Add Signed Advice: ID %s\n", assetID);
                 byte[] assetJSON = status.serialize();
                 stub.putState(assetID, assetJSON);
@@ -258,6 +258,7 @@ public final class NoteContract implements ContractInterface {
             if (dsig.verify(asset, signature)) {
                 privData.addSignature(sign);
                 savePrivateData(ctx, assetID, privData);
+                status.setStatus(privData.getStatus());
                 System.out.printf(" Add Signature: ID %s\n", assetID);
                 byte[] assetJSON = status.serialize();
                 stub.putState(assetID, assetJSON);

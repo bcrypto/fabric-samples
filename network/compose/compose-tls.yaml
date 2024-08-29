@@ -1,0 +1,25 @@
+networks:
+  test:
+    name: fabric_test
+
+services:
+  tls_ca:
+    image: hyperledger/fabric-ca:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=tls-ca
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7053
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:17053
+    ports:
+      - "7053:7053"
+      - "17053:17053"
+    command: sh -c 'fabric-ca-server start -b admin:adminpw -d'
+    volumes:
+      - ../organizations/tls-ca:/etc/hyperledger/fabric-ca-server
+    container_name: tls_ca
+    networks:
+      - test
+

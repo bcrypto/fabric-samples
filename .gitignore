@@ -46,4 +46,6 @@ test-network/organizations/fabric-ca/operator/*.pem
 test-network/organizations/fabric-ca/operator/*.db
 test-network/organizations/fabric-ca/operator/*Key
 
-network/
+network/client
+network/fabric*
+network/organizations

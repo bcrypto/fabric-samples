@@ -86,7 +86,7 @@ cp ./tls-ca/org1user/msp/keystore/* org1user/tls/key.pem
 
 ## Register and enroll client (app)
 ```
-fabric-ca-client register -d --id.name org1client --id.secret org1clientpw -u https://apmi5:7055 --mspdir ./org1-ca/rcaadmin/msp --id.type peer --tls.certfiles tls-root-cert/tls-ca-cert.pem
+fabric-ca-client register -d --id.name org1client --id.secret org1clientpw -u https://apmi5:7055 --mspdir ./org1-ca/rcaadmin/msp --id.type client --tls.certfiles tls-root-cert/tls-ca-cert.pem
 
 fabric-ca-client enroll -u https://org1client:org1clientpw@apmi5:7055 --mspdir ./org1client/msp --csr.hosts 'apmi5,localhost' --tls.certfiles tls-root-cert/tls-ca-cert.pem
 ```

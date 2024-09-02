@@ -1,0 +1,1 @@
+docker compose -f compose/compose-ca.yaml stop $1_ca

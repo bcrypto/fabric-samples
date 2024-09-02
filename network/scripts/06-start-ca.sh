@@ -1,1 +1,1 @@
-docker compose -f compose/compose-tls.yaml up -d $1_ca
+docker compose -f compose/compose-ca.yaml up -d $1_ca

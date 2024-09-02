@@ -1,0 +1,64 @@
+networks:
+  test:
+    name: fabric_test
+
+services:
+   org1_ca:
+    image: hyperledger/fabric-ca:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=org1-ca
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7055
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:17055
+    ports:
+      - "7055:7055"
+      - "17055:17055"
+    command: sh -c 'fabric-ca-server start -b org1ca:org1capw -d'
+    volumes:
+      - ../organizations/fabric-ca/org1:/etc/hyperledger/fabric-ca-server
+    container_name: org1_ca
+    networks:
+      - test
+
+   org2_ca:
+    image: hyperledger/fabric-ca:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=org2-ca
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7056
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:17056
+    ports:
+      - "7056:7056"
+      - "17056:17056"
+    command: sh -c 'fabric-ca-server start -b org2ca:org2capw -d'
+    volumes:
+      - ../organizations/fabric-ca/org1:/etc/hyperledger/fabric-ca-server
+    container_name: org2_ca
+    networks:
+      - test
+
+   org3_ca:
+    image: hyperledger/fabric-ca:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CA_HOME=/etc/hyperledger/fabric-ca-server
+      - FABRIC_CA_SERVER_CA_NAME=org3-ca
+      - FABRIC_CA_SERVER_TLS_ENABLED=true
+      - FABRIC_CA_SERVER_PORT=7057
+      - FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS=0.0.0.0:17057
+    ports:
+      - "7057:7057"
+      - "17057:17057"
+    command: sh -c 'fabric-ca-server start -b org3ca:org3capw -d'
+    volumes:
+      - ../organizations/fabric-ca/org1:/etc/hyperledger/fabric-ca-server
+    container_name: org3_ca
+    networks:
+      - test

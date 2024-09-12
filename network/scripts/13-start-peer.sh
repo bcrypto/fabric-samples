@@ -1,0 +1,1 @@
+docker compose -f compose/compose-peers.yaml up -d $1

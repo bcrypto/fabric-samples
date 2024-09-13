@@ -34,6 +34,7 @@ bash scripts/08-ca-register.sh org1 client
 bash scripts/09-ca-enroll-peer.sh org1 peer
 bash scripts/10-ca-enroll-client.sh org1 client 
 bash scripts/12-stop-ca.sh org1
+bash scripts/17-config.sh peer org1 peer
 ```
 
 # Enroll orderer nodes
@@ -48,4 +49,11 @@ bash scripts/11-ca-enroll-orderer.sh ord1 node1
 bash scripts/11-ca-enroll-orderer.sh ord1 node2
 bash scripts/11-ca-enroll-orderer.sh ord1 node3
 bash scripts/12-stop-ca.sh ord1
+bash scripts/17-config.sh orderer ord1 node1
+```
+
+# Start network
+```
+bash scripts/13-start-peer.sh org1peer
+bash scripts/15-start-orderer.sh ord1node1
 ```

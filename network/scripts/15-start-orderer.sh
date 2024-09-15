@@ -1,0 +1,1 @@
+docker compose -f compose/compose-orderers.yaml up -d $1

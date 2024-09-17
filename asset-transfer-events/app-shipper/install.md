@@ -2,12 +2,14 @@
 git clone https://github.com/bcrypto/bee2j.git
 cd bee2j
 mvn clean install
+
 # Apache Santuario
 git clone https://github.com/apache/santuario-xml-security-java.git
 cd santuario-xml-security-java
 git checkout xmlsec-4.0.2
 git apply ../santuario-4.0.2-bee2j.patch 
-mvn clean install
+mvn clean install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
+
 # Hyperledger Fabric 
 ## Add dependencies to build.gradle:
 +   implementation 'by.bcrypto:bee2j:1.0'

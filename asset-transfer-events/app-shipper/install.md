@@ -9,6 +9,8 @@ cd santuario-xml-security-java
 git checkout xmlsec-4.0.2
 git apply ../santuario-4.0.2-bee2j.patch 
 mvn clean install -Dmaven.test.skip=true -Dmaven.javadoc.skip=true
+## Dependency hell solution 
+[mvn dependency:purge-local-repository -DreResolve=false]
 
 # Hyperledger Fabric 
 ## Add dependencies to build.gradle:

@@ -8,6 +8,11 @@ test-network$ ./network.sh up createChannel -c mychannel -ca -s couchdb
 test-network$ ./network.sh deployCC -ccn events -ccp ../asset-transfer-events/chaincode-java/ -cccg ../asset-transfer-events/chaincode-java/collections_config.json -ccl java -ccep "OR('Org1MSP.peer','Org2MSP.peer')"
 ```
 
+# Load second smart-contract
+```
+test-network$ ./network.sh deployCC -ccn opcode -ccp ../asset-transfer-events/opcode-java/ -cccg ../asset-transfer-events/opcode-java/collections_config.json -ccl java -ccep "OR('Org1MSP.peer')"
+```
+
 # Start app
 ## Start shipper app
 ```

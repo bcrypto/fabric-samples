@@ -37,6 +37,9 @@ public class ChannelMenu {
             if (action == 1) {
                 return 1;
             }
+            if (action == 2) {
+                menu.setNodeId(noteId);
+            }
         } while (action != 0);
         return 0;
     }
@@ -44,7 +47,7 @@ public class ChannelMenu {
     private String addNewNote() {
         // TODO: call operator SC
         String assetId = "asset" + Instant.now().toEpochMilli();
-        System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
+        //System.out.println("\n--> Submit transaction: CreateNote, " + assetId + " from 10 to 100");
 
         try {
             long blockNumber = client.createNote(assetId);
@@ -70,8 +73,8 @@ public class ChannelMenu {
                 case 1:
                     return 1;
                 case 2:
-                    noteId = addNewNote();
-                    return 2;
+                    addNewNote();
+                    break;
                 case 3:
                     listNote();
                     break;

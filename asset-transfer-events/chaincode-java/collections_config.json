@@ -1,17 +1,5 @@
 [
     {
-      "name": "accounts",
-      "policy": "OR('OperatorMSP.member')",
-      "requiredPeerCount": 0,
-      "maxPeerCount": 1,
-      "blockToLive": 0,
-      "memberOnlyRead": true,
-      "memberOnlyWrite": true,
-      "endorsementPolicy": {
-        "signaturePolicy": "OR('OperatorMSP.member')"
-      }
-    },
-    {
       "name": "shipper_reciever_collection",
       "policy": "OR('Org1MSP.member','Org2MSP.member','OperatorMSP.member')",
       "requiredPeerCount": 1,

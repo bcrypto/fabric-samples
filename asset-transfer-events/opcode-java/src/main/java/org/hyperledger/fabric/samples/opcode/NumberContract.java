@@ -36,7 +36,7 @@ info = @Info(
                 url = "https://hyperledger.example.com")))
 @Default
 public final class NumberContract implements ContractInterface {
-  
+
     public NumberContract() {
     }
     /**
@@ -49,9 +49,6 @@ public final class NumberContract implements ContractInterface {
     @Transaction(intent = Transaction.TYPE.EVALUATE)
     public String GetNoteNumber(final Context ctx, final String shipper) {
         System.out.printf("GetNoteNumber: ID %s\n", shipper);
-
-
         return "shipper" + Instant.now().toEpochMilli();
     }
-    
 }

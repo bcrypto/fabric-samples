@@ -14,13 +14,16 @@ import org.hyperledger.fabric.contract.annotation.Default;
 import org.hyperledger.fabric.contract.annotation.Info;
 import org.hyperledger.fabric.contract.annotation.License;
 import org.hyperledger.fabric.contract.annotation.Transaction;
+import org.hyperledger.fabric.shim.Chaincode;
 import org.hyperledger.fabric.shim.ChaincodeException;
 import org.hyperledger.fabric.shim.ChaincodeStub;
 import org.hyperledger.fabric.shim.ledger.KeyValue;
 import org.hyperledger.fabric.shim.ledger.QueryResultsIterator;
+import org.hyperledger.fabric.shim.Chaincode.Response;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,21 +111,30 @@ public final class NoteContract implements ContractInterface {
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.INCOMPLETE_INPUT.toString());
         }
+        String newID = assetID;
+        try {
+            Response r = ctx.getStub().invokeChaincodeWithStringArgs("opcode", Arrays.asList("GetNoteNumber", shipper));
+            if (r.getStatus() == Chaincode.Response.Status.SUCCESS) {
+                newID = r.getStringPayload();
+            }
+        } catch (RuntimeException e) {
+            System.out.println("Opcode chaincode is not available");
+        }
         // Check if asset already exists
-        byte[] assetJSON = ctx.getStub().getState(assetID);
+        byte[] assetJSON = ctx.getStub().getState(newID);
         if (assetJSON != null && assetJSON.length > 0) {
-            errorMessage = String.format("Note %s already exists", assetID);
+            errorMessage = String.format("Note %s already exists", newID);
             System.err.println(errorMessage);
             throw new ChaincodeException(errorMessage, AssetTransferErrors.ASSET_ALREADY_EXISTS.toString());
         }
 
-        Note asset = new Note(assetID, shipper, reciever);
-        NoteStatus status = new NoteStatus(assetID, shipper, reciever, "()");
-        savePrivateData(ctx, assetID, asset);
+        Note asset = new Note(newID, shipper, reciever);
+        NoteStatus status = new NoteStatus(newID, shipper, reciever, "()");
+        savePrivateData(ctx, newID, asset);
         assetJSON = status.serialize();
-        System.out.printf("CreateNote Put: ID %s Data %s\n", assetID, new String(assetJSON));
+        System.out.printf("CreateNote Put: ID %s Data %s\n", newID, new String(assetJSON));
 
-        stub.putState(assetID, assetJSON);
+        stub.putState(newID, assetJSON);
 
         if (isOperator(ctx)) {
             UpdateAccount(ctx, shipper, false);

@@ -8,12 +8,16 @@ import java.util.Scanner;
 import org.w3c.dom.Document;
 
 public class NoteMenu {
-    private final String noteId;
+    private String noteId;
     private final Client client;
 
-     public NoteMenu(final Client client, final String noteId) {
+     public NoteMenu(final Client client, String noteId) {
         this.client = client;
         this.noteId = noteId;
+    }
+
+    public void setNodeId(String id) {
+        this.noteId = id;
     }
 
     public int start () {

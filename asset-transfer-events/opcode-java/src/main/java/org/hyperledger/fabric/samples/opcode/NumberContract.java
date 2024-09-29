@@ -1,4 +1,4 @@
-package org.hyperledger.fabric.samples.events;
+package org.hyperledger.fabric.samples.opcode;
 
 import java.time.Instant;
 
@@ -22,9 +22,9 @@ import org.hyperledger.fabric.contract.annotation.Transaction;
 */
 
 @Contract(
-name = "number-events",
+name = "numbers",
 info = @Info(
-        title = "Note Events Contract",
+        title = "Number Events Contract",
         description = "The hyperlegendary note processing events sample",
         version = "0.0.1-SNAPSHOT",
         license = @License(

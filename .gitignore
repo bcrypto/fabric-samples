@@ -49,3 +49,7 @@ test-network/organizations/fabric-ca/operator/*Key
 network/client
 network/fabric*
 network/organizations
+
+nettest/organizations
+log.txt
+channel-artifacts/

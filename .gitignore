@@ -53,3 +53,4 @@ network/organizations
 nettest/organizations
 log.txt
 channel-artifacts/
+nettest/tmp/

@@ -54,3 +54,6 @@ nettest/organizations
 log.txt
 channel-artifacts/
 nettest/tmp/
+
+netstar/tmp
+netstar/organizations

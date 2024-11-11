@@ -43,8 +43,8 @@ function gen_orderer() {
     working_dir: /root
     command: orderer
     volumes:
-        - ../organizations/ordererOrganizations/example.com/orderers/${ORG}.example.com/msp:/var/hyperledger/${ORG}/msp
-        - ../organizations/ordererOrganizations/example.com/orderers/${ORG}.example.com/tls/:/var/hyperledger/${ORG}/tls
+        - ../tmp/organizations/ordererOrganizations/example.com/orderers/${ORG}.example.com/msp:/var/hyperledger/${ORG}/msp
+        - ../tmp/organizations/ordererOrganizations/example.com/orderers/${ORG}.example.com/tls/:/var/hyperledger/${ORG}/tls
         - ${ORG}.example.com:/var/hyperledger/production/${ORG}
     ports:
       - 7050:7050
@@ -92,7 +92,7 @@ function gen_peer() {
       - CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG={"peername":"peer0${ORG}"}
       - CORE_CHAINCODE_EXECUTETIMEOUT=300s
     volumes:
-      - ../organizations/peerOrganizations/${ORG}.example.com/peers/peer0.${ORG}.example.com:/etc/hyperledger/fabric
+      - ../tmp/organizations/peerOrganizations/${ORG}.example.com/peers/peer0.${ORG}.example.com:/etc/hyperledger/fabric
       - peer0.${ORG}.example.com:/var/hyperledger/production
       - ./peercfg:/etc/hyperledger/peercfg
       - ${DOCKER_SOCK}:/host/var/run/docker.sock

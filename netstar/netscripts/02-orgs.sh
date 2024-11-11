@@ -6,6 +6,7 @@ export FABRIC_CFG_PATH=$PWD/../config/
 CRYPTO="cryptogen"
 CRYPTOGEN_CONF="tmp/cryptogen"
 ORG_CONFIG="../test-network/organizations"
+OUTPUT_DIR="tmp/organizations"
 
 function gen_crypto_config() {
   ORG=$1
@@ -70,12 +71,12 @@ function generateOrgCCP() {
   ORG_NUM=${ORG:3}
   P0PORT=$((100*ORG_NUM + 7051))
   CAPORT=$((100*ORG_NUM + 7054))
-  PEERPEM=organizations/peerOrganizations/${ORG_LITTLE}.example.com/tlsca/tlsca.${ORG_LITTLE}.example.com-cert.pem
-  CAPEM=organizations/peerOrganizations/${ORG_LITTLE}.example.com/ca/ca.${ORG_LITTLE}.example.com-cert.pem
+  PEERPEM=$OUTPUT_DIR/peerOrganizations/${ORG_LITTLE}.example.com/tlsca/tlsca.${ORG_LITTLE}.example.com-cert.pem
+  CAPEM=$OUTPUT_DIR/peerOrganizations/${ORG_LITTLE}.example.com/ca/ca.${ORG_LITTLE}.example.com-cert.pem
 
   infoln "Generating CCP files for ${ORG}"
-  echo "$(json_ccp $ORG $ORG_LITTLE $ORG_DOMAIN $P0PORT $CAPORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/${ORG_LITTLE}.example.com/connection-${ORG_LITTLE}.json
-  echo "$(yaml_ccp $ORG_NUM $ORG_LITTLE $ORG_DOMAIN $P0PORT $CAPORT $PEERPEM $CAPEM)" > organizations/peerOrganizations/${ORG_LITTLE}.example.com/connection-${ORG_LITTLE}.yaml
+  echo "$(json_ccp $ORG $ORG_LITTLE $ORG_DOMAIN $P0PORT $CAPORT $PEERPEM $CAPEM)" > $OUTPUT_DIR/peerOrganizations/${ORG_LITTLE}.example.com/connection-${ORG_LITTLE}.json
+  echo "$(yaml_ccp $ORG_NUM $ORG_LITTLE $ORG_DOMAIN $P0PORT $CAPORT $PEERPEM $CAPEM)" > $OUTPUT_DIR/peerOrganizations/${ORG_LITTLE}.example.com/connection-${ORG_LITTLE}.yaml
 }
 
 function generateCCP() {
@@ -91,7 +92,7 @@ function createOrg() {
   infoln "Creating ${ORG^} Identities"
 
   set -x
-  cryptogen generate --config=$CRYPTOGEN_CONF/crypto-config-${ORG,,}.yaml --output="organizations"
+  cryptogen generate --config=$CRYPTOGEN_CONF/crypto-config-${ORG,,}.yaml --output="$OUTPUT_DIR"
   res=$?
   { set +x; } 2>/dev/null
   if [ $res -ne 0 ]; then

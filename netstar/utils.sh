@@ -44,7 +44,7 @@ function verifyResult() {
 }
 
 ORG_COUNT=5
-NET=${PWD}
+NET=${PWD}/tmp
 PEER_ORGANIZATIONS=$NET/organizations/peerOrganizations
 ORDERER_ORGANIZATIONS=$NET/organizations/ordererOrganizations
 export CORE_PEER_TLS_ENABLED=true

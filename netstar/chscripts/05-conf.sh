@@ -15,7 +15,7 @@ MAX_RETRY=5
 # default for delay between commands
 CLI_DELAY=3
 # channel name defaults to "mychannel"
-CHANNEL_NAME="channel${ORG1_NAME}${ORG2_NAME}"
+CHANNEL_NAME="channel-${ORG1_NAME,,}-${ORG2_NAME,,}"
 # default database
 DATABASE="leveldb"
 

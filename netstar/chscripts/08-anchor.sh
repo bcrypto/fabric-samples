@@ -1,11 +1,14 @@
 #!/bin/bash
 SCRIPTDIR="$(dirname "$(realpath "$0")")"
-source $SCRIPTDIR/utils.sh
+source $SCRIPTDIR/../utils.sh
 export PATH="$(dirname $(readlink -e ./))/bin:$PATH"
 
 export FABRIC_CFG_PATH=${PWD}/../config
 export VERBOSE=false
 # scripts/createChannel.sh $CHANNEL_NAME $CLI_DELAY $MAX_RETRY $VERBOSE
+
+ORG1_NAME=$1
+ORG2_NAME=$2
 
 # timeout duration - the duration the CLI should wait for a response from
 # another container before giving up
@@ -13,26 +16,25 @@ MAX_RETRY=5
 # default for delay between commands
 DELAY=3
 # channel name defaults to "mychannel"
-CHANNEL_NAME="mychannel"
+CHANNEL_NAME="channel-${ORG1_NAME,,}-${ORG2_NAME,,}"
 # default database
 DATABASE="leveldb"
 
 TMPDIR=./tmp
-mkdir $TMPDIR
+mkdir -p $TMPDIR
 
 : ${CONTAINER_CLI:="docker"}
 : ${CONTAINER_CLI_COMPOSE:="${CONTAINER_CLI} compose"}
 infoln "Using ${CONTAINER_CLI} and ${CONTAINER_CLI_COMPOSE}"
 
 
-export CORE_PEER_TLS_ENABLED=true
-export ORDERER_CA=${PWD}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+#export CORE_PEER_TLS_ENABLED=true
+#export ORDERER_CA=${PWD}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
 export PEER0_ORG1_CA=${PWD}/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
 export PEER0_ORG2_CA=${PWD}/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
 export PEER0_ORG3_CA=${PWD}/organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
-export PEER0_OPERATOR_CA=${PWD}/organizations/peerOrganizations/operator.by/tlsca/tlsca.operator.by-cert.pem
-export ORDERER_ADMIN_TLS_SIGN_CERT=${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
-export ORDERER_ADMIN_TLS_PRIVATE_KEY=${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.key
+#export ORDERER_ADMIN_TLS_SIGN_CERT=${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.crt
+#export ORDERER_ADMIN_TLS_PRIVATE_KEY=${PWD}/organizations/ordererOrganizations/example.com/orderers/orderer.example.com/tls/server.key
 
 # fetchChannelConfig <org> <channel_id> <output_json>
 # Writes the current channel config for a given channel to a JSON file
@@ -75,15 +77,12 @@ createConfigUpdate() {
 }
 
 ## Set the anchor peers for each org in the channel
-infoln "Setting anchor peer for org1..."
-ORG=org1
-export CORE_PEER_ADDRESS=peer0.org1.example.com:7051
-export CORE_PEER_LOCALMSPID="Org1MSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG1_CA
-export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-export CORE_PEER_ADDRESS=localhost:7051
-export HOST="peer0.org1.example.com"
-export PORT=7051
+setAnchorPeer() {
+  infoln "Setting anchor peer for $1..."
+  ORG=$1
+  setGlobals $ORG
+  export HOST="peer0.${ORG,,}.example.com"
+  export PORT=$PEER_PORT
 # NOTE: this must be run in a CLI container since it requires jq and configtxlator 
 # createAnchorPeerUpdate() {
   infoln "Fetching channel config for channel $CHANNEL_NAME"
@@ -99,33 +98,9 @@ export PORT=7051
   # {orgmsp}config.json and {orgmsp}modified_config.json, write
   # it as a transaction to {orgmsp}anchors.tx
   createConfigUpdate ${CHANNEL_NAME} $TMPDIR/${CORE_PEER_LOCALMSPID}config.json $TMPDIR/${CORE_PEER_LOCALMSPID}modified_config.json $TMPDIR/${CORE_PEER_LOCALMSPID}anchors.tx
-#}
+}
 
-infoln "Setting anchor peer for org2..."
-ORG=org2
-export CORE_PEER_ADDRESS=peer0.org2.example.com:9051
-export CORE_PEER_LOCALMSPID="Org2MSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG2_CA
-export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
-export CORE_PEER_ADDRESS=localhost:9051
-export HOST="peer0.org2.example.com"
-export PORT=9051
-# NOTE: this must be run in a CLI container since it requires jq and configtxlator 
-# createAnchorPeerUpdate() {
-  infoln "Fetching channel config for channel $CHANNEL_NAME"
-  fetchChannelConfig $ORG $CHANNEL_NAME $TMPDIR/${CORE_PEER_LOCALMSPID}config.json
-
-  infoln "Generating anchor peer update transaction for Org${ORG} on channel $CHANNEL_NAME"
-
-  set -x
-  # Modify the configuration to append the anchor peer 
-  jq '.channel_group.groups.Application.groups.'${CORE_PEER_LOCALMSPID}'.values += {"AnchorPeers":{"mod_policy": "Admins","value":{"anchor_peers": [{"host": "'$HOST'","port": '$PORT'}]},"version": "0"}}' $TMPDIR/${CORE_PEER_LOCALMSPID}config.json > $TMPDIR/${CORE_PEER_LOCALMSPID}modified_config.json
-  { set +x; } 2>/dev/null
-
-  # Compute a config update, based on the differences between 
-  # {orgmsp}config.json and {orgmsp}modified_config.json, write
-  # it as a transaction to {orgmsp}anchors.tx
-  createConfigUpdate ${CHANNEL_NAME} $TMPDIR/${CORE_PEER_LOCALMSPID}config.json $TMPDIR/${CORE_PEER_LOCALMSPID}modified_config.json $TMPDIR/${CORE_PEER_LOCALMSPID}anchors.tx
-#}
+setAnchorPeer $ORG1_NAME
+setAnchorPeer $ORG2_NAME
 
 successln "Config for '$CHANNEL_NAME' updated"

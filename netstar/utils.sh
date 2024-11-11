@@ -57,12 +57,12 @@ export ORDERER_ADMIN_TLS_PRIVATE_KEY=$ORDERER_ORGANIZATIONS/example.com/orderers
 setGlobals() {
   ORG=$1
   ORG_NUM=${ORG:3}
-  PEER_PORT=$(( 100*ORG_NUM + 7051))
+  export PEER_PORT=$(( 100*ORG_NUM + 7051))
   infoln "Using organization ${ORG^}"
   if [ $ORG_NUM -le $ORG_COUNT ]; then
     export CORE_PEER_LOCALMSPID="${ORG^}MSP"
-    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ORGANIZATIONS/${ORG}.example.com/tlsca/tlsca.${ORG}.example.com-cert.pem
-    export CORE_PEER_MSPCONFIGPATH=$PEER_ORGANIZATIONS/${ORG}.example.com/users/Admin@${ORG}.example.com/msp
+    export CORE_PEER_TLS_ROOTCERT_FILE=$PEER_ORGANIZATIONS/${ORG,,}.example.com/tlsca/tlsca.${ORG,,}.example.com-cert.pem
+    export CORE_PEER_MSPCONFIGPATH=$PEER_ORGANIZATIONS/${ORG,,}.example.com/users/Admin@${ORG,,}.example.com/msp
     export CORE_PEER_ADDRESS=localhost:$PEER_PORT
   else
     errorln "ORG Unknown"

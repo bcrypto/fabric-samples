@@ -1,11 +1,14 @@
 #!/bin/bash
 SCRIPTDIR="$(dirname "$(realpath "$0")")"
-source $SCRIPTDIR/utils.sh
+source $SCRIPTDIR/../utils.sh
 export PATH="$(dirname $(readlink -e ./))/bin:$PATH"
 
 export FABRIC_CFG_PATH=${PWD}/../config
 export VERBOSE=false
 # scripts/createChannel.sh $CHANNEL_NAME $CLI_DELAY $MAX_RETRY $VERBOSE
+
+ORG1_NAME=$1
+ORG2_NAME=$2
 
 # timeout duration - the duration the CLI should wait for a response from
 # another container before giving up
@@ -13,7 +16,7 @@ MAX_RETRY=5
 # default for delay between commands
 DELAY=3
 # channel name defaults to "mychannel"
-CHANNEL_NAME="mychannel"
+CHANNEL_NAME="channel-${ORG1_NAME,,}-${ORG2_NAME,,}"
 # default database
 DATABASE="leveldb"
 
@@ -23,7 +26,7 @@ TMPDIR=./tmp
 : ${CONTAINER_CLI_COMPOSE:="${CONTAINER_CLI} compose"}
 infoln "Using ${CONTAINER_CLI} and ${CONTAINER_CLI_COMPOSE}"
 
-ORDERER_CA=${PWD}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
+#ORDERER_CA=${PWD}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
 
 updateAnchorPeer() {
   peer channel update -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c $CHANNEL_NAME -f $TMPDIR/${CORE_PEER_LOCALMSPID}anchors.tx --tls --cafile "$ORDERER_CA" >&log.txt
@@ -33,25 +36,14 @@ updateAnchorPeer() {
   successln "Anchor peer set for org '$CORE_PEER_LOCALMSPID' on channel '$CHANNEL_NAME'"
 }
 
-ORG=org1
-export CORE_PEER_ADDRESS=peer0.org1.example.com:7051
-export CORE_PEER_LOCALMSPID="Org1MSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG1_CA
-export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-export CORE_PEER_ADDRESS=localhost:7051
-export HOST="peer0.org1.example.com"
-export PORT=7051
-updateAnchorPeer
+setAnchorPeer() {
+  infoln "Update anchor peer for $1..."
+  ORG=$1
+  setGlobals $ORG
+  updateAnchorPeer
+}
 
-infoln "Setting anchor peer for org2..."
-ORG=org2
-export CORE_PEER_ADDRESS=peer0.org2.example.com:9051
-export CORE_PEER_LOCALMSPID="Org2MSP"
-export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG2_CA
-export CORE_PEER_MSPCONFIGPATH=${PWD}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
-export CORE_PEER_ADDRESS=localhost:9051
-export HOST="peer0.org2.example.com"
-export PORT=9051
-updateAnchorPeer
+setAnchorPeer $ORG1_NAME
+setAnchorPeer $ORG2_NAME
 
 successln "Channel '$CHANNEL_NAME' joined"

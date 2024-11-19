@@ -41,10 +41,10 @@ createChannelGenesisBlock() {
 }
 
 mkdir -p ${PWD}/tmp/configtx/${CHANNEL_NAME}
-sed -e "s/Org1/$ORG1_NAME/g" \
-    -e "s/org1/${ORG1_NAME,,}/g" \
-  	-e "s/Org2/$ORG2_NAME/g" \
-    -e "s/org2/${ORG2_NAME,,}/g" \
+sed -e "s/__Org1__/$ORG1_NAME/g" \
+    -e "s/__org1__/${ORG1_NAME,,}/g" \
+  	-e "s/__Org2__/$ORG2_NAME/g" \
+    -e "s/__org2__/${ORG2_NAME,,}/g" \
       ${PWD}/configtx/Org1Org2/configtx.yaml > ${PWD}/tmp/configtx/${CHANNEL_NAME}/configtx.yaml
 
 export FABRIC_CFG_PATH=${PWD}/tmp/configtx/${CHANNEL_NAME}/

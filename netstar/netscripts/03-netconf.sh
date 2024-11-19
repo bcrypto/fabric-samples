@@ -136,3 +136,6 @@ gen_orderer Orderer $OUTPUT
 for (( k = 1; k < $COUNT+1; ++k )); do
   gen_peer Org$k $OUTPUT
 done
+
+mkdir -p $COMPOSE_CONF/peercfg
+cp ../config/core.yaml $COMPOSE_CONF/peercfg

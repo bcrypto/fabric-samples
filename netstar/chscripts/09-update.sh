@@ -1,6 +1,7 @@
 #!/bin/bash
 SCRIPTDIR="$(dirname "$(realpath "$0")")"
 source $SCRIPTDIR/../utils.sh
+source $SCRIPTDIR/chutils.sh
 export PATH="$(dirname $(readlink -e ./))/bin:$PATH"
 
 export FABRIC_CFG_PATH=${PWD}/../config
@@ -27,21 +28,6 @@ TMPDIR=./tmp
 infoln "Using ${CONTAINER_CLI} and ${CONTAINER_CLI_COMPOSE}"
 
 #ORDERER_CA=${PWD}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
-
-updateAnchorPeer() {
-  peer channel update -o localhost:7050 --ordererTLSHostnameOverride orderer.example.com -c $CHANNEL_NAME -f $TMPDIR/${CORE_PEER_LOCALMSPID}anchors.tx --tls --cafile "$ORDERER_CA" >&log.txt
-  res=$?
-  cat log.txt
-  verifyResult $res "Anchor peer update failed"
-  successln "Anchor peer set for org '$CORE_PEER_LOCALMSPID' on channel '$CHANNEL_NAME'"
-}
-
-setAnchorPeer() {
-  infoln "Update anchor peer for $1..."
-  ORG=$1
-  setGlobals $ORG
-  updateAnchorPeer
-}
 
 setAnchorPeer $ORG1_NAME
 setAnchorPeer $ORG2_NAME

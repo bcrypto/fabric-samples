@@ -9,6 +9,15 @@ plugins {
     id 'jacoco'
 }
 
+sourceSets.all {
+  configurations.getByName(runtimeClasspathConfigurationName) {
+    attributes.attribute(Attribute.of("org.gradle.jvm.environment", String), "standard-jvm")
+  }
+  configurations.getByName(compileClasspathConfigurationName) {
+    attributes.attribute(Attribute.of("org.gradle.jvm.environment", String), "standard-jvm")
+  }
+}
+
 group 'org.hyperledger.fabric.samples'
 version '1.0-SNAPSHOT'
 

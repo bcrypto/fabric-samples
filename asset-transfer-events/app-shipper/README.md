@@ -40,3 +40,8 @@ http://127.0.0.1:5984/_utils
 login:admin
 pass:adminpw
 ```
+
+# Start app with generated properties
+```
+./gradlew run --args '../../netstar/tmp/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/app.properties channel.name=channel-org2-org4'
+```

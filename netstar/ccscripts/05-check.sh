@@ -16,7 +16,7 @@ INIT_REQUIRED=""
 VERBOSE=false
 TMPDIR=./tmp
 CC_END_POLICY="OR('${ORG1_NAME^}MSP.peer','${ORG2_NAME^}MSP.peer')"
-CC_COLL_CONFIG=$TMPDIR/configtx/${CHANNEL_NAME}/collection_config.json
+CC_COLL_CONFIG=$TMPDIR/configtx/${CHANNEL_NAME}/collections_config.json
 
 # checkCommitReadiness VERSION PEER ORG
 function checkCommitReadiness() {

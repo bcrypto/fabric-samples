@@ -15,7 +15,7 @@ CC_SEQUENCE=1
 INIT_REQUIRED=""
 VERBOSE=false
 CC_END_POLICY="OR('${ORG1_NAME^}MSP.peer','${ORG2_NAME^}MSP.peer')"
-CC_COLL_CONFIG=$TMPDIR/configtx/${CHANNEL_NAME}/collection_config.json
+CC_COLL_CONFIG=$TMPDIR/configtx/${CHANNEL_NAME}/collections_config.json
 
 # parsePeerConnectionParameters $@
 # Helper function that sets the peer connection parameters for a chaincode

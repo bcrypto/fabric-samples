@@ -29,6 +29,11 @@ asset-transfer-events/app-shipper$ ./gradlew run --args './settings/rec.properti
 asset-transfer-events/app-shipper$ ./gradlew run --args './settings/rec.properties msg.input=msg/recadv1.xml'
 ```
 
+## Start app in command mode (without UI)
+```
+asset-transfer-events/app-shipper$ ./gradlew run --args '../../netstar/tmp/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/app.properties channel.name=channel-org3-org5 mode=command channel.action=add note.action=add'
+```
+
 # Stop test network
 ```
 test-network$ ./network.sh down   

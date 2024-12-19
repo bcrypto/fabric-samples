@@ -47,6 +47,10 @@ public class NoteMenu {
     }
 
     public int show() {
+        String mode = client.getProperties().getProperty("mode");
+        if ((mode != null) && mode.contentEquals("command")) {
+            return 1;
+        }
         String prompt = "0. Back to menu\n1. Exit\n2. Add message\n3. Export note\n" 
             +"4. Sign message\n5. List messages";
         System.out.println(prompt);

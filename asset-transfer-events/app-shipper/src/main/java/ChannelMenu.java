@@ -16,7 +16,7 @@ public class ChannelMenu {
         int action;
         String name = client.getProperties().getProperty("channel.action");
         String note = client.getProperties().getProperty("note.name");
-        if (name != null && name == "add") {
+        if (name != null && name.contentEquals("add")) {
             noteId = addNewNote();
         } else if (note != null) {
             noteId = note;
@@ -61,6 +61,10 @@ public class ChannelMenu {
 
     @SuppressWarnings("resource")
     public int show() {
+        String mode = client.getProperties().getProperty("mode");
+        if ((mode != null) && mode.contentEquals("command")) {
+            return 1;
+        }
         String prompt = "0. Back to menu\n1. Exit\n2. Add note\n3. Show note list\n4. Select note\n5. Show channel events";
         System.out.println(prompt);
         @SuppressWarnings("resource")

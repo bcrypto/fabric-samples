@@ -26,6 +26,10 @@ public class MainMenu {
     }
 
     public int show() {
+        String mode = client.getProperties().getProperty("mode");
+        if ((mode != null) && mode.contentEquals("command")) {
+            return 1;
+        }
         String prompt = "1. Exit\n2. Select current channel\n3. Show channel list";
         System.out.println("Current channel is: "+ client.getChannelName());
         System.out.println(prompt);

@@ -21,6 +21,18 @@ sed -e "s/__Org1__/${ORG1_NAME^}/g" \
   	-e "s/__Org2__/${ORG2_NAME^}/g" \
       ${PWD}/configtx/Org1Org2/collections_config.json > ${CC_COLL_CONFIG}
 
+if [ "$CC_END_POLICY" = "NA" ]; then
+  CC_END_POLICY=""
+else
+  CC_END_POLICY="--signature-policy $CC_END_POLICY"
+fi
+
+if [ "$CC_COLL_CONFIG" = "NA" ]; then
+  CC_COLL_CONFIG=""
+else
+  CC_COLL_CONFIG="--collections-config $CC_COLL_CONFIG"
+fi
+
 # approveForMyOrg VERSION PEER ORG
 function approveForMyOrg() {
   ORG=$1

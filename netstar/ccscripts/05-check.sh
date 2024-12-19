@@ -18,6 +18,18 @@ TMPDIR=./tmp
 CC_END_POLICY="OR('${ORG1_NAME^}MSP.peer','${ORG2_NAME^}MSP.peer')"
 CC_COLL_CONFIG=$TMPDIR/configtx/${CHANNEL_NAME}/collections_config.json
 
+if [ "$CC_END_POLICY" = "NA" ]; then
+  CC_END_POLICY=""
+else
+  CC_END_POLICY="--signature-policy $CC_END_POLICY"
+fi
+
+if [ "$CC_COLL_CONFIG" = "NA" ]; then
+  CC_COLL_CONFIG=""
+else
+  CC_COLL_CONFIG="--collections-config $CC_COLL_CONFIG"
+fi
+
 # checkCommitReadiness VERSION PEER ORG
 function checkCommitReadiness() {
   ORG=$1

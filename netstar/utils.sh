@@ -43,7 +43,7 @@ function verifyResult() {
   fi
 }
 
-ORG_COUNT=5
+ORG_COUNT=20
 NET=${PWD}/tmp
 PEER_ORGANIZATIONS=$NET/organizations/peerOrganizations
 ORDERER_ORGANIZATIONS=$NET/organizations/ordererOrganizations

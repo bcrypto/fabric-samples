@@ -3,7 +3,7 @@
 ORG_COUNT=${1:-5}
 CYCLES=${2:-2}
 
-for(( i=1; i < $CYCLES; i++)); do 
+for(( i=0; i < $CYCLES; i++)); do 
     echo "$i "
     for (( k = 1; k < $ORG_COUNT + 1; ++k )); do
         for (( j = k + 1; j < $ORG_COUNT + 1; ++j )); do

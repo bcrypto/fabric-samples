@@ -17,6 +17,8 @@ channel.name=mychannel
 msg.input=msg/desadv.xml
 msg.output=result.xml
 msg.ref=desadv1
+lang=en
+country=US
 " > ./tmp/organizations/peerOrganizations/org$k.example.com/users/User1@org$k.example.com/app.properties
 done
 

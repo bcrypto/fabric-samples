@@ -279,25 +279,6 @@ public final class NoteContract implements ContractInterface {
         }
     }
 
-    /**
-     * Deletes a asset & related details from the ledger.
-     *
-     * @param ctx the transaction context
-     * @param assetID asset to delete
-     */
-    @Transaction(intent = Transaction.TYPE.SUBMIT)
-    public void DeleteNote(final Context ctx, final String assetID) {
-        ChaincodeStub stub = ctx.getStub();
-        System.out.printf("DeleteNote: verify asset %s exists\n", assetID);
-        NoteStatus asset = getState(ctx, assetID);
-
-        System.out.printf(" Delete Note:  ID %s\n", assetID);
-        // delete private details of asset
-        removePrivateData(ctx, assetID);
-        stub.delState(assetID);         // delete the key from Statedb
-        stub.setEvent("DeleteNote", asset.serialize()); // publish Event
-    }
-
     private NoteStatus getState(final Context ctx, final String assetID) {
         byte[] assetJSON = ctx.getStub().getState(assetID);
         if (assetJSON == null || assetJSON.length == 0) {
@@ -356,31 +337,12 @@ public final class NoteContract implements ContractInterface {
         return new String(transientAsset, UTF_8);
     }
 
-    private void removePrivateData(final Context ctx, final String assetKey) {
-        String peerMSPID = ctx.getStub().getMspId();
-        String clientMSPID = ctx.getClientIdentity().getMSPID();
-        String implicitCollectionName = getCollectionName(ctx);
-
-        if (peerMSPID.equals(clientMSPID)) {
-            System.out.printf("PrivateData Delete from collection %s, ID %s\n", implicitCollectionName, assetKey);
-            ctx.getStub().delPrivateData(implicitCollectionName, assetKey);
-        }
-    }
-
     // Return the implicit collection name, to use for private property persistance
     private String getCollectionName(final Context ctx) {
         // Get the MSP ID of submitting client identity
         //String clientMSPID = ctx.getClientIdentity().getMSPID();
         //String collectionName = IMPLICIT_COLLECTION_NAME_PREFIX + clientMSPID;
         return COLLECTION_NAME;
-    }
-
-    private boolean isOperator(final Context ctx) {
-        String peerMSPID = ctx.getStub().getMspId();
-        System.out.printf("peerMSPID: %s \n", peerMSPID);
-        String clientMSPID = ctx.getClientIdentity().getMSPID();
-        System.out.printf("clientMSPID: %s \n", clientMSPID);
-        return false;
     }
 
     /**

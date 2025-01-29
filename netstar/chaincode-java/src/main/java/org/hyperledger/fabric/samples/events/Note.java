@@ -46,7 +46,7 @@ public final class Note {
         noteID = ID;
         this.shipper = shipper;
         this.reciever = reciever;
-        this.status = "0";
+        this.status = "()";
         messages = new HashMap<String, String>();
         signatures = new ArrayList<XmlSignature>();
     }
@@ -137,7 +137,7 @@ public final class Note {
      */
     public void addMessage(final String id, final String message) {
         if (id.startsWith("desadv")) {
-            if (status.equals("0")) {
+            if (status.equals("()")) {
                 messages.put(id, message);
                 status = "->";
             }

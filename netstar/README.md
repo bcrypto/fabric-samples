@@ -25,6 +25,12 @@ bash netscripts/08-certs.sh
 bash netscripts/09-appconf.sh 
 ```
 
+### Run BPKI in Docker
+```
+docker compose build
+docker compose run bpki_ca
+```
+
 ## Add channels and SC
 ```
 bash chscripts/20-star.sh

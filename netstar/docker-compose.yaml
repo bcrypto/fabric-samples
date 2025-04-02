@@ -1,0 +1,17 @@
+version: '3'
+
+services:
+  bpki_ca:
+    build: .
+    restart: "no"
+    command: bash "bpki/10-start.sh"
+    volumes:
+      - ./out:/out
+      - .:/app
+    ports:
+      - "0.0.0.0:5000:80"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
